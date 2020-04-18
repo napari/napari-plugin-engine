@@ -1,9 +1,11 @@
-try:
-    from ._version import version as __version__
-except ImportError:
-    # broken installation, we don't even try
-    # unknown only works because we do poor mans version compare
-    __version__ = "unknown"
+from .callers import HookCallError
+from .hooks import HookimplMarker, HookspecMarker
+from .manager import PluginManager, PluginValidationError
+
+__version__ = "0.1.0"
+
+napari_hook_implementation = HookimplMarker("napari")
+napari_hook_specification = HookspecMarker("napari")
 
 __all__ = [
     "PluginManager",
@@ -11,8 +13,6 @@ __all__ = [
     "HookCallError",
     "HookspecMarker",
     "HookimplMarker",
+    "napari_hook_implementation",
+    "napari_hook_specification",
 ]
-
-from .manager import PluginManager, PluginValidationError
-from .callers import HookCallError
-from .hooks import HookspecMarker, HookimplMarker
