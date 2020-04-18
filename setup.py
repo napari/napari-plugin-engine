@@ -31,22 +31,21 @@ EXTRAS_REQUIRE = {
 
 def main():
     setup(
-        name="pluggy",
+        name="napluggy",
         description="plugin and hook calling mechanisms for python",
         long_description=long_description,
-        use_scm_version={"write_to": "src/pluggy/_version.py"},
         setup_requires=["setuptools-scm"],
         license="MIT license",
         platforms=["unix", "linux", "osx", "win32"],
         author="Holger Krekel",
         author_email="holger@merlinux.eu",
-        url="https://github.com/pytest-dev/pluggy",
-        python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
+        url="https://github.com/napari/napluggy",
+        python_requires=">=3.6.*",
         install_requires=['importlib-metadata>=0.12;python_version<"3.8"'],
         extras_require=EXTRAS_REQUIRE,
         classifiers=classifiers,
-        packages=["pluggy"],
-        package_dir={"": "src"},
+        packages=["napluggy"],
+
     )
 
 

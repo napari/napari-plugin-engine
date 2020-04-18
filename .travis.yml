@@ -5,7 +5,7 @@ stages:
 - name: test
   if: tag IS NOT present
 - name: deploy
-  if: repo = pytest-dev/pluggy AND tag IS present
+  if: repo = napari/napluggy AND tag IS present
 
 jobs:
   include:
@@ -53,7 +53,7 @@ jobs:
           secure: PDvQCKfXrF1V/tdwEOfeDEjDs6vJ9gKWo4yrMUmBx1JL5plHZaqfHLftlGMoHekaQTHcfyYYbxignFw5IGsn97/nFKKWDPNBfZA+3RJJmeJfz2NQunYkSnoqtBtfEtWHzFPdkCm0w/CN9C8IpRjhvLnFTUQzil6iMy6wZG276gU=
         on:
           tags: true
-          repo: pytest-dev/pluggy
+          repo: napari/napluggy
 
 install:
   - pip install -U pip

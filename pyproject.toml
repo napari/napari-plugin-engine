@@ -6,11 +6,11 @@ requires = [
 ]
 
 [tool.towncrier]
-package = "pluggy"
-package_dir = "src/pluggy"
+package = "napluggy"
+package_dir = "napluggy"
 filename = "CHANGELOG.rst"
 directory = "changelog/"
-title_format = "pluggy {version} ({project_date})"
+title_format = "napluggy {version} ({project_date})"
 template = "changelog/_template.rst"
 
   [[tool.towncrier.type]]

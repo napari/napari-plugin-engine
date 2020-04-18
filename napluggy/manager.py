@@ -326,7 +326,7 @@ class PluginManager(object):
         of HookImpl instances and the keyword arguments for the hook call.
 
         ``after(outcome, hook_name, hook_impls, kwargs)`` receives the
-        same arguments as ``before`` but also a :py:class:`pluggy.callers._Result` object
+        same arguments as ``before`` but also a :py:class:`napluggy.callers._Result` object
         which represents the result of the overall hook call.
         """
         oldcall = self._inner_hookexec

@@ -1,5 +1,5 @@
-from pluggy.hooks import varnames
-from pluggy.manager import _formatdef
+from napluggy.hooks import varnames
+from napluggy.manager import _formatdef
 
 import sys
 import pytest

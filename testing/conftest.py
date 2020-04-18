@@ -6,7 +6,7 @@ import pytest
     ids=["spec-is-class", "spec-is-instance"],
 )
 def he_pm(request, pm):
-    from pluggy import HookspecMarker
+    from napluggy import HookspecMarker
 
     hookspec = HookspecMarker("example")
 
@@ -21,6 +21,6 @@ def he_pm(request, pm):
 
 @pytest.fixture
 def pm():
-    from pluggy import PluginManager
+    from napluggy import PluginManager
 
     return PluginManager("example")

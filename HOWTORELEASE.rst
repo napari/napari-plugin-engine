@@ -14,10 +14,10 @@ Release Procedure
 #. Publish to PyPI by pushing a tag::
 
      git tag X.Y.Z release-X.Y.Z
-     git push git@github.com:pytest-dev/pluggy.git X.Y.Z
+     git push git@github.com:napari/napluggy.git X.Y.Z
 
    The tag will trigger a new build, which will deploy to PyPI.
 
-#. Make sure it is `available on PyPI <https://pypi.org/project/pluggy>`_.
+#. Make sure it is `available on PyPI <https://pypi.org/project/napluggy>`_.
 
 #. Merge the PR into ``master``, either manually or using GitHub's web interface.

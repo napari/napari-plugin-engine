@@ -4,14 +4,14 @@
 import pytest
 import types
 
-from pluggy import (
+from napluggy import (
     PluginManager,
     PluginValidationError,
     HookCallError,
     HookimplMarker,
     HookspecMarker,
 )
-from pluggy.manager import importlib_metadata
+from napluggy.manager import importlib_metadata
 
 
 hookspec = HookspecMarker("example")

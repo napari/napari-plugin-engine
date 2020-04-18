@@ -2,8 +2,8 @@
 Deprecation warnings testing roundup.
 """
 import pytest
-from pluggy.callers import _Result
-from pluggy import PluginManager, HookimplMarker, HookspecMarker
+from napluggy.callers import _Result
+from napluggy import PluginManager, HookimplMarker, HookspecMarker
 
 hookspec = HookspecMarker("example")
 hookimpl = HookimplMarker("example")
