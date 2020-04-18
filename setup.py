@@ -16,7 +16,7 @@ classifiers = [
     ("Programming Language :: Python :: %s" % x) for x in "3.6 3.7 3.8".split()
 ]
 
-with open("README.rst", "rb") as fd:
+with open("README.md", "rb") as fd:
     long_description = fd.read().decode("utf-8")
 
 with open("CHANGELOG.rst", "rb") as fd:
@@ -33,9 +33,8 @@ def main():
         name="naplugi",
         description="plugin and hook calling mechanisms for python",
         long_description=long_description,
-        setup_requires=["setuptools-scm"],
+        long_description_content_type='text/markdown',
         license="MIT license",
-        platforms=["unix", "linux", "osx", "win32"],
         author="Holger Krekel",
         author_email="holger@merlinux.eu",
         maintainer="Talley Lambert",
