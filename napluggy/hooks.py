@@ -19,7 +19,11 @@ class HookspecMarker(object):
         self.project_name = project_name
 
     def __call__(
-        self, function=None, firstresult=False, historic=False, warn_on_impl=None
+        self,
+        function=None,
+        firstresult=False,
+        historic=False,
+        warn_on_impl=None,
     ):
         """ if passed a function, directly sets attributes on the function
         which will make it discoverable to :py:meth:`.PluginManager.add_hookspecs`.
@@ -186,7 +190,8 @@ def varnames(func):
     implicit_names = ("self",) if not _PYPY3 else ("self", "obj")
     if args:
         if inspect.ismethod(func) or (
-            "." in getattr(func, "__qualname__", ()) and args[0] in implicit_names
+            "." in getattr(func, "__qualname__", ())
+            and args[0] in implicit_names
         ):
             args = args[1:]
 
@@ -197,15 +202,10 @@ def varnames(func):
     return args, kwargs
 
 
-class _HookRelay(object):
-    """ hook holder object for performing 1:N hook calls where N is the number
-    of registered plugins.
-
-    """
-
-
 class _HookCaller(object):
-    def __init__(self, name, hook_execute, specmodule_or_class=None, spec_opts=None):
+    def __init__(
+        self, name, hook_execute, specmodule_or_class=None, spec_opts=None
+    ):
         self.name = name
         self._wrappers = []
         self._nonwrappers = []
@@ -281,12 +281,16 @@ class _HookCaller(object):
         assert not self.is_historic()
         if self.spec and self.spec.argnames:
             notincall = (
-                set(self.spec.argnames) - set(["__multicall__"]) - set(kwargs.keys())
+                set(self.spec.argnames)
+                - set(["__multicall__"])
+                - set(kwargs.keys())
             )
             if notincall:
                 warnings.warn(
                     "Argument(s) {} which are declared in the hookspec "
-                    "can not be found in this hook call".format(tuple(notincall)),
+                    "can not be found in this hook call".format(
+                        tuple(notincall)
+                    ),
                     stacklevel=2,
                 )
         return self._hookexec(self, self.get_hookimpls(), kwargs)
@@ -351,7 +355,10 @@ class HookImpl(object):
         self.__dict__.update(hook_impl_opts)
 
     def __repr__(self):
-        return "<HookImpl plugin_name=%r, plugin=%r>" % (self.plugin_name, self.plugin)
+        return "<HookImpl plugin_name=%r, plugin=%r>" % (
+            self.plugin_name,
+            self.plugin,
+        )
 
 
 class HookSpec(object):
