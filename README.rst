@@ -1,12 +1,11 @@
-====================================================
-napluggy - A minimalist production ready plugin system
-====================================================
+==================================================
+napluggy - pluggy modified for napari (not pluggy)
+==================================================
 
-|pypi| |conda-forge| |versions| |travis| |appveyor| |gitter| |black| |codecov|
+|pypi| |versions| |travis| |appveyor| |black| |codecov|
 
-This is the core framework used by the `pytest`_, `tox`_, and `devpi`_ projects.
+this is a fork of `pluggy`_, modified by the `napari`_ team.
 
-Please `read the docs`_ to learn more!
 
 A definitive example
 ====================
@@ -83,13 +82,6 @@ Running this directly gets us::
 .. |appveyor| image:: https://img.shields.io/appveyor/ci/pytestbot/napluggy/master.svg
     :target: https://ci.appveyor.com/project/pytestbot/napluggy
 
-.. |conda-forge| image:: https://img.shields.io/conda/vn/conda-forge/napluggy.svg
-    :target: https://anaconda.org/conda-forge/pytest
-
-.. |gitter| image:: https://badges.gitter.im/napari/napluggy.svg
-    :alt: Join the chat at https://gitter.im/napari/napluggy
-    :target: https://gitter.im/napari/napluggy?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
-
 .. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/ambv/black
 
@@ -102,7 +94,7 @@ Running this directly gets us::
     http://pytest.org
 .. _tox:
     https://tox.readthedocs.org
-.. _devpi:
-    http://doc.devpi.net
-.. _read the docs:
-   https://napluggy.readthedocs.io/en/latest/
+.. _napari:
+    http://github.com/napari/napari
+.. _pluggy:
+    https://github.com/pytest-dev/pluggy

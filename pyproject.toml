@@ -1,44 +1,4 @@
-[build-system]
-requires = [
-  "setuptools",
-  "setuptools-scm",
-  "wheel",
-]
-
-[tool.towncrier]
-package = "napluggy"
-package_dir = "napluggy"
-filename = "CHANGELOG.rst"
-directory = "changelog/"
-title_format = "napluggy {version} ({project_date})"
-template = "changelog/_template.rst"
-
-  [[tool.towncrier.type]]
-  directory = "removal"
-  name = "Deprecations and Removals"
-  showcontent = true
-
-  [[tool.towncrier.type]]
-  directory = "feature"
-  name = "Features"
-  showcontent = true
-
-  [[tool.towncrier.type]]
-  directory = "bugfix"
-  name = "Bug Fixes"
-  showcontent = true
-
-  [[tool.towncrier.type]]
-  directory = "vendor"
-  name = "Vendored Libraries"
-  showcontent = true
-
-  [[tool.towncrier.type]]
-  directory = "doc"
-  name = "Improved Documentation"
-  showcontent = true
-
-  [[tool.towncrier.type]]
-  directory = "trivial"
-  name = "Trivial/Internal Changes"
-  showcontent = true
+[tool.black]
+target-version = ['py36', 'py37', 'py38']
+skip-string-normalization = true
+line-length = 79
