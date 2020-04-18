@@ -15,17 +15,6 @@ def test_result_deprecated():
         assert r.result == 10
 
 
-def test_implprefix_deprecated():
-    with pytest.deprecated_call():
-        pm = PluginManager("blah", implprefix="blah_")
-
-    class Plugin:
-        def blah_myhook(self, arg1):
-            return arg1
-
-    with pytest.deprecated_call():
-        pm.register(Plugin())
-
 
 def test_callhistoric_proc_deprecated(pm):
     """``proc`` kwarg to `PluginMananger.call_historic()` is now officially
