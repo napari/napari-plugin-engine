@@ -1,14 +1,14 @@
 [run]
 include =
-  napluggy/*
+  naplugi/*
   testing/*
-  */lib/python*/site-packages/napluggy/*
-  */pypy*/site-packages/napluggy/*
-  *\Lib\site-packages\napluggy\*
+  */lib/python*/site-packages/naplugi/*
+  */pypy*/site-packages/naplugi/*
+  *\Lib\site-packages\naplugi\*
 branch = 1
 
 [paths]
-source = napluggy/
-  */lib/python*/site-packages/napluggy/
-  */pypy*/site-packages/napluggy/
-  *\Lib\site-packages\napluggy\
+source = naplugi/
+  */lib/python*/site-packages/naplugi/
+  */pypy*/site-packages/naplugi/
+  *\Lib\site-packages\naplugi\

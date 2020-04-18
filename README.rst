@@ -1,5 +1,5 @@
 ==================================================
-napluggy - pluggy modified for napari (not pluggy)
+naplugi - pluggy modified for napari (not pluggy)
 ==================================================
 
 |pypi| |versions| |travis| |appveyor| |black| |codecov|
@@ -11,10 +11,10 @@ A definitive example
 ====================
 .. code-block:: python
 
-    import napluggy
+    import naplugi
 
-    hookspec = napluggy.HookspecMarker("myproject")
-    hookimpl = napluggy.HookimplMarker("myproject")
+    hookspec = naplugi.HookspecMarker("myproject")
+    hookimpl = naplugi.HookimplMarker("myproject")
 
 
     class MySpec(object):
@@ -48,7 +48,7 @@ A definitive example
 
 
     # create a manager and add the spec
-    pm = napluggy.PluginManager("myproject")
+    pm = naplugi.PluginManager("myproject")
     pm.add_hookspecs(MySpec)
 
     # register plugins
@@ -70,23 +70,23 @@ Running this directly gets us::
 
 .. badges
 
-.. |pypi| image:: https://img.shields.io/pypi/v/napluggy.svg
-    :target: https://pypi.org/pypi/napluggy
+.. |pypi| image:: https://img.shields.io/pypi/v/naplugi.svg
+    :target: https://pypi.org/pypi/naplugi
 
-.. |versions| image:: https://img.shields.io/pypi/pyversions/napluggy.svg
-    :target: https://pypi.org/pypi/napluggy
+.. |versions| image:: https://img.shields.io/pypi/pyversions/naplugi.svg
+    :target: https://pypi.org/pypi/naplugi
 
-.. |travis| image:: https://img.shields.io/travis/napari/napluggy/master.svg
-    :target: https://travis-ci.org/napari/napluggy
+.. |travis| image:: https://img.shields.io/travis/napari/naplugi/master.svg
+    :target: https://travis-ci.org/napari/naplugi
 
-.. |appveyor| image:: https://img.shields.io/appveyor/ci/pytestbot/napluggy/master.svg
-    :target: https://ci.appveyor.com/project/pytestbot/napluggy
+.. |appveyor| image:: https://img.shields.io/appveyor/ci/pytestbot/naplugi/master.svg
+    :target: https://ci.appveyor.com/project/pytestbot/naplugi
 
 .. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/ambv/black
 
-.. |codecov| image:: https://codecov.io/gh/napari/napluggy/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/napari/napluggy
+.. |codecov| image:: https://codecov.io/gh/napari/naplugi/branch/master/graph/badge.svg
+    :target: https://codecov.io/gh/napari/naplugi
     :alt: Code coverage Status
 
 .. links

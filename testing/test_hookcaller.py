@@ -1,7 +1,7 @@
 import pytest
 
-from napluggy import HookimplMarker, HookspecMarker, PluginValidationError
-from napluggy.hooks import HookImpl
+from naplugi import HookimplMarker, HookspecMarker, PluginValidationError
+from naplugi.hooks import HookImpl
 
 hookspec = HookspecMarker("example")
 hookimpl = HookimplMarker("example")

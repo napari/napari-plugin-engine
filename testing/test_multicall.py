@@ -1,7 +1,7 @@
 import pytest
-from napluggy import HookCallError, HookspecMarker, HookimplMarker
-from napluggy.hooks import HookImpl
-from napluggy.callers import _multicall, _legacymulticall
+from naplugi import HookCallError, HookspecMarker, HookimplMarker
+from naplugi.hooks import HookImpl
+from naplugi.callers import _multicall, _legacymulticall
 
 
 hookspec = HookspecMarker("example")

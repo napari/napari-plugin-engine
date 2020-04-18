@@ -1,6 +1,6 @@
 import warnings
 import pytest
-from napluggy import PluginManager, HookimplMarker, HookspecMarker
+from naplugi import PluginManager, HookimplMarker, HookspecMarker
 
 hookspec = HookspecMarker("example")
 hookimpl = HookimplMarker("example")
@@ -69,7 +69,7 @@ def test_warn_when_deprecated_specified(recwarn):
 
 
 def test_plugin_getattr_raises_errors():
-    """napluggy must be able to handle plugins which raise weird exceptions
+    """naplugi must be able to handle plugins which raise weird exceptions
     when getattr() gets called (#11).
     """
 

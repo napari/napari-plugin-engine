@@ -78,6 +78,7 @@ class PluginManager(object):
     def __init__(
         self,
         project_name: str,
+        *,
         autodiscover: Union[bool, str] = False,
         discover_entrypoint: str = '',
         discover_prefix: str = '',
@@ -154,12 +155,12 @@ class PluginManager(object):
             self.hook._needs_discovery = False
 
         # allow debugging escape hatch
-        if os.environ.get("NAPLUGGY_DISABLE_PLUGINS"):
+        if os.environ.get("naplugi_DISABLE_PLUGINS"):
             import warnings
 
             warnings.warn(
                 'Plugin discovery disabled due to '
-                'environmental variable "NAPLUGGY_DISABLE_PLUGINS"'
+                'environmental variable "naplugi_DISABLE_PLUGINS"'
             )
             return 0
 
@@ -302,20 +303,6 @@ class PluginManager(object):
         if res is not None and not isinstance(res, dict):
             # false positive
             res = None
-        # TODO: remove when we drop implprefix in 1.0
-        elif (
-            res is None
-            and self._implprefix
-            and name.startswith(self._implprefix)
-        ):
-            _warn_for_function(
-                DeprecationWarning(
-                    "The `implprefix` system is deprecated please decorate "
-                    "this function using an instance of HookimplMarker."
-                ),
-                method,
-            )
-            res = {}
         return res
 
     def unregister(self, plugin=None, name=None):
@@ -505,7 +492,7 @@ class PluginManager(object):
         of HookImpl instances and the keyword arguments for the hook call.
 
         ``after(outcome, hook_name, hook_impls, kwargs)`` receives the
-        same arguments as ``before`` but also a :py:class:`napluggy.callers._Result` object
+        same arguments as ``before`` but also a :py:class:`naplugi.callers._Result` object
         which represents the result of the overall hook call.
         """
         oldcall = self._inner_hookexec

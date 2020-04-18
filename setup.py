@@ -31,7 +31,7 @@ EXTRAS_REQUIRE = {
 
 def main():
     setup(
-        name="napluggy",
+        name="naplugi",
         description="plugin and hook calling mechanisms for python",
         long_description=long_description,
         setup_requires=["setuptools-scm"],
@@ -39,12 +39,12 @@ def main():
         platforms=["unix", "linux", "osx", "win32"],
         author="Holger Krekel",
         author_email="holger@merlinux.eu",
-        url="https://github.com/napari/napluggy",
+        url="https://github.com/napari/naplugi",
         python_requires=">=3.6.*",
         install_requires=['importlib-metadata>=0.12;python_version<"3.8"'],
         extras_require=EXTRAS_REQUIRE,
         classifiers=classifiers,
-        packages=["napluggy"],
+        packages=["naplugi"],
 
     )
 
