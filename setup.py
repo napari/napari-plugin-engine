@@ -13,8 +13,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
 ] + [
-    ("Programming Language :: Python :: %s" % x)
-    for x in "2 2.7 3 3.4 3.5 3.6 3.7 3.8".split()
+    ("Programming Language :: Python :: %s" % x) for x in "3.6 3.7 3.8".split()
 ]
 
 with open("README.rst", "rb") as fd:
@@ -39,13 +38,14 @@ def main():
         platforms=["unix", "linux", "osx", "win32"],
         author="Holger Krekel",
         author_email="holger@merlinux.eu",
+        maintainer="Talley Lambert",
+        maintainer_email="talley.lambert@gmail.com",
         url="https://github.com/napari/naplugi",
         python_requires=">=3.6.*",
         install_requires=['importlib-metadata>=0.12;python_version<"3.8"'],
         extras_require=EXTRAS_REQUIRE,
         classifiers=classifiers,
         packages=["naplugi"],
-
     )
 
 

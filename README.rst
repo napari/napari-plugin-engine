@@ -1,14 +1,15 @@
-==================================================
-naplugi - pluggy modified for napari (not pluggy)
-==================================================
+====================================
+naplugi - pluggy modified for napari
+====================================
 
 |pypi| |versions| |travis| |appveyor| |black| |codecov|
 
 this is a fork of `pluggy`_, modified by the `napari`_ team.
 
 
-A definitive example
-====================
+An example
+==========
+
 .. code-block:: python
 
     import naplugi
