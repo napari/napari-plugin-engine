@@ -4,15 +4,18 @@ Internal hook annotation, representation and calling machinery.
 import inspect
 import sys
 import warnings
+from types import ModuleType
+from typing import Callable, Optional
+
 from .callers import _legacymulticall, _multicall
 
 
-class HookspecMarker(object):
+class HookspecMarker:
     """ Decorator helper class for marking functions as hook specifications.
 
-    You can instantiate it with a project_name to get a decorator.
-    Calling :py:meth:`.PluginManager.add_hookspecs` later will discover all marked functions
-    if the :py:class:`.PluginManager` uses the same project_name.
+    You can instantiate it with a project_name to get a decorator. Calling
+    :py:meth:`.PluginManager.add_hookspecs` later will discover all marked
+    functions if the :py:class:`.PluginManager` uses the same project_name.
     """
 
     def __init__(self, project_name):
@@ -26,16 +29,17 @@ class HookspecMarker(object):
         warn_on_impl=None,
     ):
         """ if passed a function, directly sets attributes on the function
-        which will make it discoverable to :py:meth:`.PluginManager.add_hookspecs`.
-        If passed no function, returns a decorator which can be applied to a function
-        later using the attributes supplied.
+        which will make it discoverable to
+        :py:meth:`.PluginManager.add_hookspecs`. If passed no function, returns
+        a decorator which can be applied to a function later using the
+        attributes supplied.
 
-        If ``firstresult`` is ``True`` the 1:N hook call (N being the number of registered
-        hook implementation functions) will stop at I<=N when the I'th function
-        returns a non-``None`` result.
+        If ``firstresult`` is ``True`` the 1:N hook call (N being the number of
+        registered hook implementation functions) will stop at I<=N when the
+        I'th function returns a non-``None`` result.
 
-        If ``historic`` is ``True`` calls to a hook will be memorized and replayed
-        on later registered plugins.
+        If ``historic`` is ``True`` calls to a hook will be memorized and
+        replayed on later registered plugins.
 
         """
 
@@ -59,54 +63,77 @@ class HookspecMarker(object):
             return setattr_hookspec_opts
 
 
-class HookimplMarker(object):
-    """ Decorator helper class for marking functions as hook implementations.
+class HookimplMarker:
+    """Decorator helper class for marking functions as hook implementations.
 
-    You can instantiate with a ``project_name`` to get a decorator.
-    Calling :py:meth:`.PluginManager.register` later will discover all marked functions
-    if the :py:class:`.PluginManager` uses the same project_name.
+    You can instantiate with a ``project_name`` to get a decorator. Calling
+    :meth:`.PluginManager.register` later will discover all marked functions if
+    the :class:`.PluginManager` uses the same project_name.
+
+    Parameters
+    ----------
+    project_name : str
+        A namespace for plugin implementations.  Implementations decorated with
+        this class will be discovered by ``PluginManager.register`` if and only
+        if ``project_name`` matches the ``project_name`` of the
+        ``PluginManager``.
     """
 
-    def __init__(self, project_name):
+    def __init__(self, project_name: str):
         self.project_name = project_name
 
     def __call__(
         self,
-        function=None,
-        hookwrapper=False,
-        optionalhook=False,
-        tryfirst=False,
-        trylast=False,
-        specname=None,
-    ):
+        function: Optional[Callable] = None,
+        *,
+        hookwrapper: bool = False,
+        optionalhook: bool = False,
+        tryfirst: bool = False,
+        trylast: bool = False,
+        specname: str = '',
+    ) -> Callable:
+        """Call the marker instance.
 
-        """ if passed a function, directly sets attributes on the function
-        which will make it discoverable to :py:meth:`.PluginManager.register`.
-        If passed no function, returns a decorator which can be applied to a
-        function later using the attributes supplied.
+        If passed a function, directly sets attributes on the function which
+        will make it discoverable to :meth:`.PluginManager.register`. If passed
+        no function, returns a decorator which can be applied to a function
+        later using the attributes supplied.
 
-        If ``optionalhook`` is ``True`` a missing matching hook specification will not result
-        in an error (by default it is an error if no matching spec is found).
+        Parameters
+        ----------
+        function : callable, optional
+            A function to decorate as a hook implementation, If ``function`` is
+            None, this method returns a function that can be used to decorate
+            other functions.
+        hookwrapper : bool, optional
+            Whether this hook implementation behaves as a hookwrapper.
+            by default False
+        optionalhook : bool, optional
+            If ``True``, a missing matching hook specification will not result
+            in an error (by default it is an error if no matching spec is
+            found), by default False.
+        tryfirst : bool, optional
+            If ``True`` this hook implementation will run as early as possible
+            in the chain of N hook implementations for a specification, by
+            default False
+        trylast : bool, optional
+            If ``True`` this hook implementation will run as late as possible
+            in the chain of N hook implementations, by default False
+        specname : str, optional
+            If provided, ``specname`` will be used instead of the function name
+            when matching this hook implementation to a hook specification
+            during registration, by default the implementation function name
+            must match the name of the corresponding hook specification.
 
-        If ``tryfirst`` is ``True`` this hook implementation will run as early as possible
-        in the chain of N hook implementations for a specification.
-
-        If ``trylast`` is ``True`` this hook implementation will run as late as possible
-        in the chain of N hook implementations.
-
-        If ``hookwrapper`` is ``True`` the hook implementations needs to execute exactly
-        one ``yield``.  The code before the ``yield`` is run early before any non-hookwrapper
-        function is run.  The code after the ``yield`` is run after all non-hookwrapper
-        function have run.  The ``yield`` receives a :py:class:`.callers._Result` object
-        representing the exception or result outcome of the inner calls (including other
-        hookwrapper calls).
-
-        If ``specname`` is provided, it will be used instead of the function name when
-        matching this hook implementation to a hook specification during registration.
-
+        Returns
+        -------
+        Callable
+            If ``function`` is not ``None``, will decorate the function with
+            attributes, and return the function.  If ``function`` is None, will
+            return a decorator that can be used to decorate functions.
         """
 
-        def setattr_hookimpl_opts(func):
+        def set_hook_implementation_attributes(func):
             setattr(
                 func,
                 self.project_name + "_impl",
@@ -121,9 +148,9 @@ class HookimplMarker(object):
             return func
 
         if function is None:
-            return setattr_hookimpl_opts
+            return set_hook_implementation_attributes
         else:
-            return setattr_hookimpl_opts(function)
+            return set_hook_implementation_attributes(function)
 
 
 def normalize_hookimpl_opts(opts):
@@ -131,7 +158,7 @@ def normalize_hookimpl_opts(opts):
     opts.setdefault("trylast", False)
     opts.setdefault("hookwrapper", False)
     opts.setdefault("optionalhook", False)
-    opts.setdefault("specname", None)
+    opts.setdefault("specname", '')
 
 
 if hasattr(inspect, "getfullargspec"):
@@ -345,8 +372,14 @@ class _HookCaller(object):
                     result_callback(res[0])
 
 
-class HookImpl(object):
-    def __init__(self, plugin, plugin_name, function, hook_impl_opts):
+class HookImpl:
+    def __init__(
+        self,
+        plugin: ModuleType,
+        plugin_name: str,
+        function: Callable,
+        hook_impl_opts: dict,
+    ):
         self.function = function
         self.argnames, self.kwargnames = varnames(self.function)
         self.plugin = plugin
@@ -359,6 +392,9 @@ class HookImpl(object):
             self.plugin_name,
             self.plugin,
         )
+
+    def __call__(self, *args):
+        return self.function(*args)
 
 
 class HookSpec(object):
