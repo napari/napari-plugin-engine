@@ -1,4 +1,4 @@
-from naplugi.hooks import varnames
+from naplugi.implementation import varnames
 from naplugi.manager import _formatdef
 
 import sys

@@ -13,7 +13,7 @@ def he_pm(request, pm):
     class Hooks(object):
         @hookspec
         def he_method1(self, arg):
-            return arg + 1
+            ...
 
     pm.add_hookspecs(request.param(Hooks))
     return pm
@@ -23,4 +23,5 @@ def he_pm(request, pm):
 def pm():
     from naplugi import PluginManager
 
-    return PluginManager("example")
+    pm = PluginManager(project_name='example', autodiscover=False)
+    return pm

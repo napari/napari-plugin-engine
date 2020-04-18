@@ -95,7 +95,7 @@ def test_call_order(pm):
         def hello(self, arg):
             assert arg == 0
             outcome = yield
-            assert outcome.get_result() == [3, 2, 1]
+            assert outcome.result == [3, 2, 1]
 
     pm.register(Plugin1())
     pm.register(Plugin2())
@@ -133,7 +133,7 @@ def test_firstresult_definition(pm):
         def hello(self, arg):
             assert arg == 3
             outcome = yield
-            assert outcome.get_result() == 2
+            assert outcome.result == 2
 
     pm.register(Plugin1())  # discarded - not the last registered plugin
     pm.register(Plugin2())  # used as result
@@ -164,7 +164,7 @@ def test_firstresult_force_result(pm):
         def hello(self, arg):
             assert arg == 3
             outcome = yield
-            assert outcome.get_result() == 4
+            assert outcome.result == 4
             outcome.force_result(0)
 
     class Plugin3(object):

@@ -2,18 +2,10 @@
 Call loop machinery
 """
 import sys
-import warnings
-
-_py3 = sys.version_info > (3, 0)
-
-
-if not _py3:
-    exec(
-        """
-def _reraise(cls, val, tb):
-    raise cls, val, tb
-"""
-    )
+from types import TracebackType
+from typing import Any, List, Optional, Tuple, Union, Type
+from .exceptions import PluginCallError
+from .implementation import HookImpl
 
 
 def _raise_wrapfail(wrap_controller, msg):
@@ -28,152 +20,187 @@ class HookCallError(Exception):
     """ Hook was called wrongly. """
 
 
-class _Result(object):
-    def __init__(self, result, excinfo):
-        self._result = result
+ExcInfo = Union[
+    Tuple[Type[BaseException], BaseException, TracebackType],
+    Tuple[None, None, None],
+]
+
+
+class HookResult:
+    """A class to store/modify results from a _multicall hook loop.
+
+    Results are accessed in ``.result`` property, which will also raise
+    any exceptions that occured during the hook loop.
+
+    Parameters
+    ----------
+    results : List[Tuple[Any, HookImpl]]
+        A list of (result, HookImpl) tuples, with the result and HookImpl
+        object responsible for each result collected during a _multicall loop.
+    excinfo : tuple
+        The output of sys.exc_info() if raised during the multicall loop.
+    firstresult : bool, optional
+        Whether the hookspec had ``firstresult == True``, by default False.
+        If True, self._result, and self.implementation will be single values,
+        otherwise they will be lists.
+    plugin_errors : list
+        A list of any :class:`napari.plugins.exceptions.PluginCallError`
+        instances that were created during the multicall loop.
+
+    Attributes
+    ----------
+    result : list or any
+        The result (if ``firstresult``) or results from the hook call.  The
+        result property will raise any errors in ``excinfo`` when accessed.
+    implementation : list or any
+        The HookImpl instance (if ``firstresult``) or instances that were
+        responsible for each result in ``result``.
+    is_firstresult : bool
+        Whether this HookResult came from a ``firstresult`` multicall.
+    """
+
+    def __init__(
+        self,
+        result: List[Tuple[Any, HookImpl]],
+        excinfo: Optional[ExcInfo],
+        firstresult: bool = False,
+        plugin_errors: Optional[List[PluginCallError]] = None,
+    ):
+        self._result = None if firstresult else []
+        self.implementation = None if firstresult else []
+        if result:
+            self._result, self.implementation = tuple(zip(*result))
+            self._result = list(self._result)
+            if firstresult and self._result:
+                self._result = self._result[0]
+                self.implementation = self.implementation[0]
+
         self._excinfo = excinfo
+        self.is_firstresult = firstresult
+        self.plugin_errors = plugin_errors
+        # str with name of hookwrapper that override result
+        self._modified_by: Optional[str] = None
 
     @property
     def excinfo(self):
         return self._excinfo
 
-    @property
-    def result(self):
-        """Get the result(s) for this hook call (DEPRECATED in favor of ``get_result()``)."""
-        msg = "Use get_result() which forces correct exception handling"
-        warnings.warn(DeprecationWarning(msg), stacklevel=2)
-        return self._result
-
     @classmethod
     def from_call(cls, func):
+        """Used when hookcall monitoring is enabled.
+
+        https://pluggy.readthedocs.io/en/latest/#call-monitoring
+        """
         __tracebackhide__ = True
-        result = excinfo = None
         try:
-            result = func()
+            return func()
         except BaseException:
-            excinfo = sys.exc_info()
+            return cls(None, sys.exc_info())
 
-        return cls(result, excinfo)
-
-    def force_result(self, result):
+    def force_result(self, result: Any):
         """Force the result(s) to ``result``.
+
+        This may be used by hookwrappers to alter this result object.
 
         If the hook was marked as a ``firstresult`` a single value should
         be set otherwise set a (modified) list of results. Any exceptions
         found during invocation will be deleted.
         """
+        import inspect
+
         self._result = result
         self._excinfo = None
+        self._modified_by = inspect.stack()[1].function
 
-    def get_result(self):
-        """Get the result(s) for this hook call.
+    @property
+    def result(self) -> Union[Any, List[Any]]:
+        """Return the result(s) for this hook call.
 
         If the hook was marked as a ``firstresult`` only a single value
         will be returned otherwise a list of results.
         """
         __tracebackhide__ = True
-        if self._excinfo is None:
-            return self._result
-        else:
-            ex = self._excinfo
-            if _py3:
-                raise ex[1].with_traceback(ex[2])
-            _reraise(*ex)  # noqa
+        if self._excinfo is not None:
+            _type, value, traceback = self._excinfo
+            if value:
+                raise value.with_traceback(traceback)
+        return self._result
 
 
 def _wrapped_call(wrap_controller, func):
     """ Wrap calling to a function with a generator which needs to yield
     exactly once.  The yield point will trigger calling the wrapped function
-    and return its ``_Result`` to the yield point.  The generator then needs
+    and return its ``HookResult`` to the yield point.  The generator then needs
     to finish (raise StopIteration) in order for the wrapped call to complete.
     """
     try:
         next(wrap_controller)  # first yield
     except StopIteration:
         _raise_wrapfail(wrap_controller, "did not yield")
-    call_outcome = _Result.from_call(func)
+    call_outcome = HookResult.from_call(func)
     try:
         wrap_controller.send(call_outcome)
         _raise_wrapfail(wrap_controller, "has second yield")
     except StopIteration:
         pass
-    return call_outcome.get_result()
+    return call_outcome.result
 
 
-class _LegacyMultiCall(object):
-    """ execute a call into multiple python functions/methods. """
+def _multicall(
+    hook_impls: List[HookImpl], caller_kwargs: dict, firstresult: bool = False,
+) -> HookResult:
+    """Loop through ``hook_impls`` with ``**caller_kwargs`` and return results.
 
-    # XXX note that the __multicall__ argument is supported only
-    # for pytest compatibility reasons.  It was never officially
-    # supported there and is explicitely deprecated since 2.8
-    # so we can remove it soon, allowing to avoid the below recursion
-    # in execute() and simplify/speed up the execute loop.
+    Parameters
+    ----------
+    hook_impls : list
+        A sequence of hook implementation (HookImpl) objects
+    caller_kwargs : dict
+        Keyword:value pairs to pass to each ``hook_impl.function``.  Every
+        key in the dict must be present in the ``argnames`` property for each
+        ``hook_impl`` in ``hook_impls``.
+    firstresult : bool, optional
+        If ``True``, return the first non-null result found, otherwise, return
+        a list of results from all hook implementations, by default False
 
-    def __init__(self, hook_impls, kwargs, firstresult=False):
-        self.hook_impls = hook_impls
-        self.caller_kwargs = kwargs  # come from _HookCaller.__call__()
-        self.caller_kwargs["__multicall__"] = self
-        self.firstresult = firstresult
+    Returns
+    -------
+    outcome : HookResult
+        A :class:`HookResult` object that contains the results returned by
+        plugins along with other metadata about the call.
 
-    def execute(self):
-        caller_kwargs = self.caller_kwargs
-        self.results = results = []
-        firstresult = self.firstresult
-
-        while self.hook_impls:
-            hook_impl = self.hook_impls.pop()
-            try:
-                args = [caller_kwargs[argname] for argname in hook_impl.argnames]
-            except KeyError:
-                for argname in hook_impl.argnames:
-                    if argname not in caller_kwargs:
-                        raise HookCallError(
-                            "hook call must provide argument %r" % (argname,)
-                        )
-            if hook_impl.hookwrapper:
-                return _wrapped_call(hook_impl.function(*args), self.execute)
-            res = hook_impl.function(*args)
-            if res is not None:
-                if firstresult:
-                    return res
-                results.append(res)
-
-        if not firstresult:
-            return results
-
-    def __repr__(self):
-        status = "%d meths" % (len(self.hook_impls),)
-        if hasattr(self, "results"):
-            status = ("%d results, " % len(self.results)) + status
-        return "<_MultiCall %s, kwargs=%r>" % (status, self.caller_kwargs)
-
-
-def _legacymulticall(hook_impls, caller_kwargs, firstresult=False):
-    return _LegacyMultiCall(
-        hook_impls, caller_kwargs, firstresult=firstresult
-    ).execute()
-
-
-def _multicall(hook_impls, caller_kwargs, firstresult=False):
-    """Execute a call into multiple python functions/methods and return the
-    result(s).
-
-    ``caller_kwargs`` comes from _HookCaller.__call__().
+    Raises
+    ------
+    HookCallError
+        If one or more of the keys in ``caller_kwargs`` is not present in one
+        of the ``hook_impl.argnames``.
+    PluginCallError
+        If ``firstresult == True`` and a plugin raises an Exception.
     """
     __tracebackhide__ = True
     results = []
-    excinfo = None
+    errors: List['PluginCallError'] = []
+    excinfo: Optional[ExcInfo] = None
     try:  # run impl and wrapper setup functions in a loop
         teardowns = []
         try:
             for hook_impl in reversed(hook_impls):
+                # the `hook_impl.enabled` attribute is specific to napari
+                # it is not recognized or implemented by pluggy
+                if not getattr(hook_impl, 'enabled', True):
+                    continue
+                args: List[Any] = []
                 try:
-                    args = [caller_kwargs[argname] for argname in hook_impl.argnames]
+                    args = [
+                        caller_kwargs[argname]
+                        for argname in hook_impl.argnames
+                    ]
                 except KeyError:
                     for argname in hook_impl.argnames:
                         if argname not in caller_kwargs:
                             raise HookCallError(
-                                "hook call must provide argument %r" % (argname,)
+                                "hook call must provide argument %r"
+                                % (argname,)
                             )
 
                 if hook_impl.hookwrapper:
@@ -184,18 +211,36 @@ def _multicall(hook_impls, caller_kwargs, firstresult=False):
                     except StopIteration:
                         _raise_wrapfail(gen, "did not yield")
                 else:
-                    res = hook_impl.function(*args)
+                    res = None
+                    # this is where the plugin function actually gets called
+                    # we put it in a try/except so that if one plugin throws
+                    # an exception, we don't lose the whole loop
+                    try:
+                        res = hook_impl.function(*args)
+                    except Exception as exc:
+                        # creating a PluginCallError will store it for later
+                        # in plugins.exceptions.PLUGIN_ERRORS
+                        errors.append(PluginCallError(hook_impl, cause=exc))
+                        # if it was a `firstresult` hook, break and raise now.
+                        if firstresult:
+                            break
+
                     if res is not None:
-                        results.append(res)
+                        results.append((res, hook_impl))
                         if firstresult:  # halt further impl calls
                             break
         except BaseException:
             excinfo = sys.exc_info()
     finally:
-        if firstresult:  # first result hooks return a single value
-            outcome = _Result(results[0] if results else None, excinfo)
-        else:
-            outcome = _Result(results, excinfo)
+        if firstresult and errors:
+            raise errors[-1]
+
+        outcome = HookResult(
+            results,
+            excinfo=excinfo,
+            firstresult=firstresult,
+            plugin_errors=errors,
+        )
 
         # run all wrapper post-yield blocks
         for gen in reversed(teardowns):
@@ -205,4 +250,4 @@ def _multicall(hook_impls, caller_kwargs, firstresult=False):
             except StopIteration:
                 pass
 
-        return outcome.get_result()
+        return outcome

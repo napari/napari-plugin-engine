@@ -6,11 +6,22 @@ import sys
 import warnings
 from logging import getLogger
 from types import ModuleType
-from typing import Dict, Generator, Optional, Tuple, Union, List
+from typing import (
+    Dict,
+    Generator,
+    Optional,
+    Tuple,
+    Union,
+    List,
+    Callable,
+    Type,
+)
 
 from . import _tracing
-from .callers import _Result
-from .hooks import HookImpl, _HookCaller, normalize_hookimpl_opts
+from .callers import HookResult
+from .hooks import _HookCaller, normalize_hookimpl_opts, HookExecFunc
+from .implementation import HookImpl
+from .exceptions import PluginError, PluginImportError, PluginRegistrationError
 
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
@@ -108,12 +119,8 @@ class PluginManager(object):
             else:
                 self.discover()
 
-        self._inner_hookexec = lambda hook, methods, kwargs: hook.multicall(
-            methods,
-            kwargs,
-            firstresult=hook.spec.opts.get("firstresult")
-            if hook.spec
-            else False,
+        self._inner_hookexec: HookExecFunc = lambda c, m, k: c.multicall(
+            m, k, firstresult=c.is_firstresult
         )
 
     @property
@@ -121,10 +128,13 @@ class PluginManager(object):
         """An alias for PluginManager.hook"""
         return self.hook
 
-    def _hookexec(self, hook, methods, kwargs):
+    def _hookexec(
+        self, caller: _HookCaller, methods: List[HookImpl], kwargs: dict
+    ) -> HookResult:
         # called from all hookcaller instances.
-        # enable_tracing will set its own wrapping function at self._inner_hookexec
-        return self._inner_hookexec(hook, methods, kwargs)
+        # enable_tracing will set its own wrapping function at
+        # self._inner_hookexec
+        return self._inner_hookexec(caller, methods, kwargs)
 
     def discover(self, path: Optional[str] = None) -> int:
         """Discover modules by both naming convention and entry_points
@@ -367,9 +377,11 @@ class PluginManager(object):
                 % (self.project_name, module_or_class,)
             )
 
-    def parse_hookspec_opts(self, module_or_class, name):
+    def parse_hookspec_opts(
+        self, module_or_class: Union[ModuleType, Type], name: str
+    ) -> Optional[dict]:
         method = getattr(module_or_class, name)
-        return getattr(method, self.project_name + "_spec", None,)
+        return getattr(method, self.project_name + "_spec", None)
 
     def get_plugins(self):
         """ return the set of registered plugins. """
@@ -482,7 +494,11 @@ class PluginManager(object):
         """ get all hook callers for the specified plugin. """
         return self._plugin2hookcallers.get(plugin)
 
-    def add_hookcall_monitoring(self, before, after):
+    def add_hookcall_monitoring(
+        self,
+        before: Callable[[str, List[HookImpl], dict], None],
+        after: Callable[[HookResult, str, List[HookImpl], dict], None],
+    ) -> Callable[[], None]:
         """ add before/after tracing functions for all hooks
         and return an undo function which, when called,
         will remove the added tracers.
@@ -497,17 +513,15 @@ class PluginManager(object):
         """
         oldcall = self._inner_hookexec
 
-        def traced_hookexec(hook, hook_impls, kwargs):
-            before(
-                hook.name, hook_impls, kwargs,
+        def traced_hookexec(
+            caller: _HookCaller, impls: List[HookImpl], kwargs: dict
+        ):
+            before(caller.name, impls, kwargs)
+            outcome = HookResult.from_call(
+                lambda: oldcall(caller, impls, kwargs)
             )
-            outcome = _Result.from_call(
-                lambda: oldcall(hook, hook_impls, kwargs,)
-            )
-            after(
-                outcome, hook.name, hook_impls, kwargs,
-            )
-            return outcome.get_result()
+            after(outcome, caller.name, impls, kwargs)
+            return outcome
 
         self._inner_hookexec = traced_hookexec
 
@@ -529,7 +543,7 @@ class PluginManager(object):
         ):
             if outcome.excinfo is None:
                 hooktrace(
-                    "finish", hook_name, "-->", outcome.get_result(),
+                    "finish", hook_name, "-->", outcome.result,
                 )
             hooktrace.root.indent -= 1
 
