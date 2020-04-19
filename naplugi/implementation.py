@@ -77,6 +77,7 @@ class HookImpl:
         plugin_name: str,
         function: Callable,
         hook_impl_opts: dict,
+        enabled: bool = True,
     ):
         self.function = function
         self.argnames, self.kwargnames = varnames(self.function)
@@ -88,6 +89,7 @@ class HookImpl:
         self.tryfirst: bool = False
         self.trylast: bool = False
         self.specname: str = ''
+        self.enabled = enabled
         self.__dict__.update(hook_impl_opts)
 
     def __repr__(self):
@@ -98,6 +100,9 @@ class HookImpl:
 
     def __call__(self, *args):
         return self.function(*args)
+
+    def get_specname(self) -> str:
+        return self.specname or self.function.__name__
 
 
 class HookSpec:

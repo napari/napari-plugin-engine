@@ -67,7 +67,7 @@ def test_register_dynamic_attr(he_pm):
 
     a = A()
     he_pm.register(a)
-    assert not he_pm.get_hookcallers(a)
+    assert not he_pm.getHookCallers(a)
 
 
 def test_pm_name(pm):
@@ -169,7 +169,7 @@ def test_register_unknown_hooks(pm):
     pm.add_hookspecs(Hooks)
     # assert not pm._unverified_hooks
     assert pm.hook.he_method1(arg=1) == [2]
-    assert len(pm.get_hookcallers(pm.get_plugin(pname))) == 1
+    assert len(pm.getHookCallers(pm.get_plugin(pname))) == 1
 
 
 def test_register_historic(pm):
@@ -204,7 +204,7 @@ def test_register_historic(pm):
 
 @pytest.mark.parametrize("result_callback", [True, False])
 def test_with_result_memorized(pm, result_callback):
-    """Verify that ``_HookCaller._maybe_apply_history()`
+    """Verify that ``HookCaller._maybe_apply_history()`
     correctly applies the ``result_callback`` function, when provided,
     to the result from calling each newly registered hook.
     """

@@ -155,7 +155,7 @@ def test_hookwrapper_too_many_yield():
     with pytest.raises(RuntimeError) as ex:
         multicall([func1], {})
     assert "func1" in str(ex.value)
-    assert (__file__ + ":") in str(ex.value)
+    assert __file__ in str(ex.value)
 
 
 @pytest.mark.parametrize("exc", [SystemExit])

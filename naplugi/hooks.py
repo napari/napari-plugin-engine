@@ -163,10 +163,10 @@ def normalize_hookimpl_opts(opts):
     opts.setdefault("specname", '')
 
 
-HookExecFunc = Callable[['_HookCaller', List[HookImpl], dict], HookResult]
+HookExecFunc = Callable[['HookCaller', List[HookImpl], dict], HookResult]
 
 
-class _HookCaller:
+class HookCaller:
     def __init__(
         self,
         name: str,
@@ -237,7 +237,7 @@ class _HookCaller:
             methods.insert(i + 1, hookimpl)
 
     def __repr__(self) -> str:
-        return f"<_HookCaller {self.name}>"
+        return f"<HookCaller {self.name}>"
 
     def call_historic(self, result_callback=None, kwargs=None):
         """Call the hook with given ``kwargs`` for all registered plugins and
@@ -311,14 +311,14 @@ class _HookCaller:
         of registration, and pluggy does not provide a built-in way to
         rearrange the call order of hook implementations.
 
-        This function accepts a `_HookCaller` instance and the desired
+        This function accepts a `HookCaller` instance and the desired
         ``new_order`` of the hook implementations (in the form of list of
         plugin names, or a list of actual ``HookImpl`` instances) and reorders
         the implementations in the hook caller accordingly.
 
         NOTE: hook implementations are actually stored in *two* separate list
-        attributes in the hook caller: ``_HookCaller._wrappers`` and
-        ``_HookCaller._nonwrappers``, according to whether the corresponding
+        attributes in the hook caller: ``HookCaller._wrappers`` and
+        ``HookCaller._nonwrappers``, according to whether the corresponding
         ``HookImpl`` instance was marked as a wrapper or not.  This method
         *only* sorts _nonwrappers.
         For more, see: https://pluggy.readthedocs.io/en/latest/#wrappers

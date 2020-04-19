@@ -19,7 +19,7 @@ from typing import (
 
 from . import _tracing
 from .callers import HookResult
-from .hooks import _HookCaller, normalize_hookimpl_opts, HookExecFunc
+from .hooks import HookCaller, normalize_hookimpl_opts, HookExecFunc
 from .implementation import HookImpl
 from .exceptions import PluginError, PluginImportError, PluginRegistrationError
 
@@ -98,7 +98,7 @@ class PluginManager(object):
         # mapping of name -> module
         self._name2plugin: Dict[str, ModuleType] = {}
         # mapping of name -> module
-        self._plugin2hookcallers: Dict[ModuleType, List[_HookCaller]] = {}
+        self._plugin2hookcallers: Dict[ModuleType, List[HookCaller]] = {}
         self._plugin_distinfo: List[Tuple[ModuleType, DistFacade]] = []
         self.trace = _tracing.TagTracer().get("pluginmanage")
         self.hook = _HookRelay(self)
@@ -129,7 +129,7 @@ class PluginManager(object):
         return self.hook
 
     def _hookexec(
-        self, caller: _HookCaller, methods: List[HookImpl], kwargs: dict
+        self, caller: HookCaller, methods: List[HookImpl], kwargs: dict
     ) -> HookResult:
         # called from all hookcaller instances.
         # enable_tracing will set its own wrapping function at
@@ -293,7 +293,7 @@ class PluginManager(object):
                 name = hookimpl_opts.get("specname") or name
                 hook = getattr(self.hook, name, None)
                 if hook is None:
-                    hook = _HookCaller(name, self._hookexec)
+                    hook = HookCaller(name, self._hookexec)
                     setattr(self.hook, name, hook)
                 elif hook.has_spec():
                     self._verify_hook(hook, hookimpl)
@@ -354,7 +354,7 @@ class PluginManager(object):
             if spec_opts is not None:
                 hc = getattr(self.hook, name, None,)
                 if hc is None:
-                    hc = _HookCaller(
+                    hc = HookCaller(
                         name, self._hookexec, module_or_class, spec_opts,
                     )
                     setattr(
@@ -490,7 +490,7 @@ class PluginManager(object):
         """ return list of name/plugin pairs. """
         return list(self._name2plugin.items())
 
-    def get_hookcallers(self, plugin):
+    def getHookCallers(self, plugin):
         """ get all hook callers for the specified plugin. """
         return self._plugin2hookcallers.get(plugin)
 
@@ -514,7 +514,7 @@ class PluginManager(object):
         oldcall = self._inner_hookexec
 
         def traced_hookexec(
-            caller: _HookCaller, impls: List[HookImpl], kwargs: dict
+            caller: HookCaller, impls: List[HookImpl], kwargs: dict
         ):
             before(caller.name, impls, kwargs)
             outcome = HookResult.from_call(
@@ -550,7 +550,7 @@ class PluginManager(object):
         return self.add_hookcall_monitoring(before, after)
 
     def subset_hook_caller(self, name, remove_plugins):
-        """ Return a new :py:class:`.hooks._HookCaller` instance for the named method
+        """ Return a new :py:class:`.hooks.HookCaller` instance for the named method
         which manages calls to all registered plugins except the
         ones from remove_plugins. """
         orig = getattr(self.hook, name)
@@ -558,7 +558,7 @@ class PluginManager(object):
             plug for plug in remove_plugins if hasattr(plug, name)
         ]
         if plugins_to_remove:
-            hc = _HookCaller(
+            hc = HookCaller(
                 orig.name, orig._hookexec, orig.spec.namespace, orig.spec.opts,
             )
             for hookimpl in orig.get_hookimpls():
@@ -588,7 +588,7 @@ else:
 
 
 class _HookRelay:
-    """Hook holder object for storing _HookCaller instances.
+    """Hook holder object for storing HookCaller instances.
 
     This object triggers (lazy) discovery of plugins as follows:  When a plugin
     hook is accessed (e.g. plugin_manager.hook.napari_get_reader), if

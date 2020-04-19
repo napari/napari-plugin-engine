@@ -32,6 +32,7 @@ def main():
     setup(
         name="naplugi",
         description="plugin and hook calling mechanisms for python",
+        version="0.0.0",
         long_description=long_description,
         long_description_content_type='text/markdown',
         license="MIT license",
