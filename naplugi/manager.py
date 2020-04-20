@@ -40,11 +40,11 @@ logger = getLogger(__name__)
 class DistFacade:
     """Emulate a pkg_resources Distribution"""
 
-    def __init__(self, dist):
+    def __init__(self, dist: importlib_metadata.Distribution):
         self._dist = dist
 
     @property
-    def project_name(self):
+    def project_name(self) -> str:
         return self.metadata["name"]
 
     def __getattr__(self, attr, default=None):
@@ -108,7 +108,7 @@ class PluginManager:
         )
 
     @property
-    def hooks(self):
+    def hooks(self) -> '_HookRelay':
         """An alias for PluginManager.hook"""
         return self.hook
 
@@ -559,19 +559,8 @@ class PluginManager:
         return orig
 
 
-if hasattr(inspect, "signature"):
-
-    def _formatdef(func):
-        return "%s%s" % (func.__name__, str(inspect.signature(func)),)
-
-
-else:
-
-    def _formatdef(func):
-        return "%s%s" % (
-            func.__name__,
-            inspect.formatargspec(*inspect.getargspec(func)),
-        )
+def _formatdef(func):
+    return "%s%s" % (func.__name__, str(inspect.signature(func)),)
 
 
 class _HookRelay:
@@ -640,7 +629,7 @@ def entry_points_for(
     """
     for dist in importlib_metadata.distributions():
         for ep in dist.entry_points:
-            if ep.group == group:
+            if ep.group == group:  # type: ignore
                 yield dist, ep
 
 
@@ -720,7 +709,7 @@ def iter_plugin_modules(
     seen_modules = set()
     if group and not os.environ.get("NAPARI_DISABLE_ENTRYPOINT_PLUGINS"):
         for dist, ep in entry_points_for(group):
-            match = ep.pattern.match(ep.value)
+            match = ep.pattern.match(ep.value)  # type: ignore
             if match:
                 module = match.group('module')
                 seen_modules.add(module.split(".")[0])

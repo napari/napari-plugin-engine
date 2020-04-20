@@ -3,18 +3,52 @@ import sys
 from types import ModuleType
 from typing import Callable, Union, Type, Optional
 
-_PYPY3 = hasattr(sys, "pypy_version_info") and sys.version_info.major == 3
 
-if hasattr(inspect, "getfullargspec"):
+class HookImpl:
+    def __init__(
+        self,
+        plugin: Optional[Union[ModuleType, Type]],
+        plugin_name: str,
+        function: Callable,
+        hook_impl_opts: dict,
+        enabled: bool = True,
+    ):
+        self.function = function
+        self.argnames, self.kwargnames = varnames(self.function)
+        self.plugin = plugin
+        self.opts = hook_impl_opts
+        self.plugin_name = plugin_name
+        self.hookwrapper: bool = False
+        self.optionalhook: bool = False
+        self.tryfirst: bool = False
+        self.trylast: bool = False
+        self.specname: str = ''
+        self.enabled = enabled
+        self.__dict__.update(hook_impl_opts)
 
-    def _getargspec(func):
-        return inspect.getfullargspec(func)
+    def __repr__(self) -> str:
+        return "<HookImpl plugin_name=%r, plugin=%r>" % (
+            self.plugin_name,
+            self.plugin,
+        )
+
+    def __call__(self, *args):
+        return self.function(*args)
+
+    def get_specname(self) -> str:
+        return self.specname or self.function.__name__
 
 
-else:
-
-    def _getargspec(func):
-        return inspect.getargspec(func)
+class HookSpec:
+    def __init__(
+        self, namespace: Union[ModuleType, Type], name: str, opts: dict
+    ):
+        self.namespace = namespace
+        self.function = function = getattr(namespace, name)
+        self.name = name
+        self.argnames, self.kwargnames = varnames(function)
+        self.opts = opts
+        self.warn_on_impl = opts.get("warn_on_impl")
 
 
 def varnames(func):
@@ -42,7 +76,7 @@ def varnames(func):
             return (), ()
 
     try:  # func MUST be a function or method here or we won't parse any args
-        spec = _getargspec(func)
+        spec = inspect.getfullargspec(func)
     except TypeError:
         return (), ()
 
@@ -55,6 +89,7 @@ def varnames(func):
 
     # strip any implicit instance arg
     # pypy3 uses "obj" instead of "self" for default dunder methods
+    _PYPY3 = hasattr(sys, "pypy_version_info") and sys.version_info.major == 3
     implicit_names = ("self",) if not _PYPY3 else ("self", "obj")
     if args:
         if inspect.ismethod(func) or (
@@ -68,48 +103,3 @@ def varnames(func):
     except TypeError:
         pass
     return args, kwargs
-
-
-class HookImpl:
-    def __init__(
-        self,
-        plugin: Optional[Union[ModuleType, Type]],
-        plugin_name: str,
-        function: Callable,
-        hook_impl_opts: dict,
-        enabled: bool = True,
-    ):
-        self.function = function
-        self.argnames, self.kwargnames = varnames(self.function)
-        self.plugin = plugin
-        self.opts = hook_impl_opts
-        self.plugin_name = plugin_name
-        self.hookwrapper: bool = False
-        self.optionalhook: bool = False
-        self.tryfirst: bool = False
-        self.trylast: bool = False
-        self.specname: str = ''
-        self.enabled = enabled
-        self.__dict__.update(hook_impl_opts)
-
-    def __repr__(self):
-        return "<HookImpl plugin_name=%r, plugin=%r>" % (
-            self.plugin_name,
-            self.plugin,
-        )
-
-    def __call__(self, *args):
-        return self.function(*args)
-
-    def get_specname(self) -> str:
-        return self.specname or self.function.__name__
-
-
-class HookSpec:
-    def __init__(self, namespace: Union[ModuleType, Type], name: str, opts):
-        self.namespace = namespace
-        self.function = function = getattr(namespace, name)
-        self.name = name
-        self.argnames, self.kwargnames = varnames(function)
-        self.opts = opts
-        self.warn_on_impl = opts.get("warn_on_impl")
