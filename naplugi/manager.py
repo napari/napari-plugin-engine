@@ -95,7 +95,6 @@ class PluginManager:
         discover_entrypoint: str = '',
         discover_prefix: str = '',
     ):
-        print("creating pm:", project_name)
         self.project_name = project_name
         # mapping of name -> module
         self._name2plugin: Dict[str, ClassOrModule] = {}
