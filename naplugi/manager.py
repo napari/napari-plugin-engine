@@ -105,12 +105,6 @@ class PluginManager:
         self.hook = _HookRelay(self)
         self.hook._needs_discovery = True
 
-        # a dict to store package metadata for each plugin, will be populated
-        # during self._register_module
-        # possible keys for this dict will be set by fetch_module_metadata()
-        # TODO: merge this with _plugin_distinfo
-        self._plugin_meta: Dict[str, Dict[str, str]] = dict()
-
         # discover external plugins
         self.discover_entrypoint = discover_entrypoint
         self.discover_prefix = discover_prefix
@@ -165,7 +159,7 @@ class PluginManager:
             The number of plugin modules successfully loaded.
         """
         self.hook._needs_discovery = False
-
+        print('discover!')
         # allow debugging escape hatch
         if os.environ.get("NAPLUGI_DISABLE_PLUGINS"):
             warnings.warn(
@@ -187,6 +181,15 @@ class PluginManager:
                 logger.info(msg)
 
         return count, errs
+
+    @contextmanager
+    def discovery_blocked(self) -> Generator:
+        current = self.hook._needs_discovery
+        self.hook._needs_discovery = False
+        try:
+            yield
+        finally:
+            self.hook._needs_discovery = current
 
     def load_entrypoints(
         self, group: str, name: str = '', ignore_errors=True
