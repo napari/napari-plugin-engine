@@ -441,7 +441,7 @@ def test_load_setuptools_instantiation(monkeypatch, pm):
         return (dist,)
 
     monkeypatch.setattr(importlib_metadata, "distributions", my_distributions)
-    num, errors = pm.load_entrypoint("hello")
+    num, errors = pm.load_entrypoints("hello")
     assert num == 1
     plugin = pm.get_plugin("myname")
     assert plugin.x == 42
@@ -451,7 +451,7 @@ def test_load_setuptools_instantiation(monkeypatch, pm):
     assert len(ret[0]) == 2
     assert ret[0][0] == plugin
     assert ret[0][1]._dist == dist
-    num, errors = pm.load_entrypoint("hello")
+    num, errors = pm.load_entrypoints("hello")
     assert num == 0  # no plugin loaded by this call
 
 

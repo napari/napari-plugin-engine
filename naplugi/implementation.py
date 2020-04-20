@@ -3,11 +3,13 @@ import sys
 from types import ModuleType
 from typing import Callable, Union, Type, Optional
 
+ClassOrModule = Union[ModuleType, Type]
+
 
 class HookImpl:
     def __init__(
         self,
-        plugin: Optional[Union[ModuleType, Type]],
+        plugin: Optional[ClassOrModule],
         plugin_name: str,
         function: Callable,
         hook_impl_opts: dict,
@@ -40,9 +42,7 @@ class HookImpl:
 
 
 class HookSpec:
-    def __init__(
-        self, namespace: Union[ModuleType, Type], name: str, opts: dict
-    ):
+    def __init__(self, namespace: ClassOrModule, name: str, opts: dict):
         self.namespace = namespace
         self.function = function = getattr(namespace, name)
         self.name = name

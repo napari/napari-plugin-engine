@@ -11,6 +11,7 @@ from .implementation import HookImpl, HookSpec
 
 
 HookExecFunc = Callable[['HookCaller', List[HookImpl], dict], HookResult]
+ClassOrModule = Union[ModuleType, Type]
 
 
 class HookCaller:
@@ -18,7 +19,7 @@ class HookCaller:
         self,
         name: str,
         hook_execute: HookExecFunc,
-        specmodule_or_class: Optional[Union[ModuleType, Type]] = None,
+        specmodule_or_class: Optional[ClassOrModule] = None,
         spec_opts: Optional[dict] = None,
     ):
         self.name = name

@@ -7,7 +7,9 @@ class PluginImportError(PluginError, ImportError):
 
 
 class PluginRegistrationError(PluginError):
-    pass
+    def __init__(self, plugin, message=''):
+        self.plugin = plugin
+        super().__init__(message)
 
 
 class HookCallError(PluginError):
@@ -21,7 +23,7 @@ class PluginValidationError(PluginError):
         may be a module or an arbitrary object.
     """
 
-    def __init__(self, plugin, message):
+    def __init__(self, plugin, message=''):
         self.plugin = plugin
         super().__init__(message)
 
