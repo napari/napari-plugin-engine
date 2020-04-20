@@ -4,29 +4,30 @@ import os
 import pkgutil
 import sys
 import warnings
+from contextlib import contextmanager
 from logging import getLogger
 from types import ModuleType
 from typing import (
+    Callable,
     Dict,
     Generator,
+    List,
     Optional,
     Tuple,
-    Union,
-    List,
-    Callable,
     Type,
+    Union,
 )
 
 from . import _tracing
 from .callers import HookResult
-from .hooks import HookCaller, HookExecFunc
-from .implementation import HookImpl
 from .exceptions import (
     PluginError,
     PluginImportError,
     PluginRegistrationError,
     PluginValidationError,
 )
+from .hooks import HookCaller, HookExecFunc
+from .implementation import HookImpl
 
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
@@ -35,6 +36,20 @@ else:
 
 
 logger = getLogger(__name__)
+
+
+@contextmanager
+def temp_path_additions(path: Optional[Union[str, List[str]]]) -> Generator:
+    if isinstance(path, str):
+        path = [path]
+    to_add = [p for p in path if p not in sys.path] if path else []
+    for p in to_add:
+        sys.path.insert(0, p)
+    try:
+        yield sys.path
+    finally:
+        for p in to_add:
+            sys.path.remove(p)
 
 
 class DistFacade:
@@ -78,6 +93,7 @@ class PluginManager:
         discover_entrypoint: str = '',
         discover_prefix: str = '',
     ):
+        print("creating pm:", project_name)
         self.project_name = project_name
         # mapping of name -> module
         self._name2plugin: Dict[str, ModuleType] = {}
@@ -145,47 +161,97 @@ class PluginManager:
         count : int
             The number of plugin modules successfully loaded.
         """
-        if path is None:
-            self.hook._needs_discovery = False
+        return 0
+        self.hook._needs_discovery = False
 
         # allow debugging escape hatch
-        if os.environ.get("naplugi_DISABLE_PLUGINS"):
-            import warnings
-
+        if os.environ.get("NAPLUGI_DISABLE_PLUGINS"):
             warnings.warn(
                 'Plugin discovery disabled due to '
-                'environmental variable "naplugi_DISABLE_PLUGINS"'
+                'environmental variable "NAPLUGI_DISABLE_PLUGINS"'
             )
             return 0
 
-        if path:
-            sys.path.insert(0, path)
+        with temp_path_additions(path):
+            count = 0
+            count = self.load_entrypoint(self.discover_entrypoint)
+            count += self.load_by_prefix(self.discover_prefix)
+            for name, module_name, meta in iter_plugin_modules(
+                prefix=self.discover_prefix, group=self.discover_entrypoint
+            ):
+                if self.get_plugin(name) or self.is_blocked(name):
+                    continue
+                try:
+                    self._register_module(name, module_name, meta)
+                    count += 1
+                except PluginError as exc:
+                    logger.error(exc.format_with_contact_info())
+                    self.unregister(name=name)
+                except Exception as exc:
+                    logger.error(
+                        f'Unexpected error loading plugin "{name}": {exc}'
+                    )
+                    self.unregister(name=name)
 
+            if count:
+                msg = f'loaded {count} plugins:\n  '
+                msg += "\n  ".join([n for n, m in self.list_name_plugin()])
+                logger.info(msg)
+
+        return count
+
+    def load_entrypoint(
+        self, group: str, name: str = '', ignore_errors=True
+    ) -> Tuple[int, List[PluginError]]:
+        if not group:
+            return 0, []
         count = 0
-        for plugin_name, module_name, meta in iter_plugin_modules(
-            prefix=self.discover_prefix, group=self.discover_entrypoint
-        ):
-            if self.get_plugin(plugin_name) or self.is_blocked(plugin_name):
-                continue
-            try:
-                self._register_module(plugin_name, module_name, meta)
+        errors: List[PluginError] = []
+        for dist in importlib_metadata.distributions():
+            for ep in dist.entry_points:
+                if (
+                    ep.group != group  # type: ignore
+                    or (name and ep.name != name)
+                    # already registered
+                    or self.get_plugin(ep.name)
+                    or self.is_blocked(ep.name)
+                ):
+                    continue
+                err: Optional[PluginError] = None
+                try:
+                    plugin = ep.load()
+                except Exception as exc:
+                    err = PluginImportError(
+                        f'Error while importing plugin "{ep.name}" entry_point'
+                        f' "{ep.value}": {str(exc)}'
+                    )
+                    err.__cause__ = exc
+                    errors.append(err)
+                    if ignore_errors:
+                        continue
+                    raise err
+                if not (inspect.isclass(plugin) or inspect.ismodule(plugin)):
+                    err = PluginValidationError(
+                        plugin,
+                        f'Plugin "{ep.name}" declared entry_point "{ep.value}"'
+                        ' which is neither a module nor a class.',
+                    )
+                    errors.append(err)
+                    if ignore_errors:
+                        continue
+                    raise err
+                self.register(plugin, name=ep.name)
+                self._plugin_distinfo.append((plugin, DistFacade(dist),))
                 count += 1
-            except PluginError as exc:
-                logger.error(exc.format_with_contact_info())
-                self.unregister(name=plugin_name)
-            except Exception as exc:
-                logger.error(
-                    f'Unexpected error loading plugin "{plugin_name}": {exc}'
-                )
-                self.unregister(name=plugin_name)
+        return count, errors
 
-        if count:
-            msg = f'loaded {count} plugins:\n  '
-            msg += "\n  ".join([n for n, m in self.list_name_plugin()])
-            logger.info(msg)
+    def load_by_prefix(self, prefix: str) -> int:
+        if not prefix:
+            return 0
+        count = 0
 
-        if path:
-            sys.path.remove(path)
+        # if self.get_plugin(name) or self.is_blocked(name):
+        #     continue
 
         return count
 
@@ -443,31 +509,6 @@ class PluginManager:
                                 % (name, hookimpl.plugin,),
                             )
 
-    def load_setuptools_entrypoints(self, group, name=None):
-        """ Load modules from querying the specified setuptools ``group``.
-
-        :param str group: entry point group to load plugins
-        :param str name: if given, loads only plugins with the given ``name``.
-        :rtype: int
-        :return: return the number of loaded plugins by this call.
-        """
-        count = 0
-        for dist in importlib_metadata.distributions():
-            for ep in dist.entry_points:
-                if (
-                    ep.group != group
-                    or (name is not None and ep.name != name)
-                    # already registered
-                    or self.get_plugin(ep.name)
-                    or self.is_blocked(ep.name)
-                ):
-                    continue
-                plugin = ep.load()
-                self.register(plugin, name=ep.name)
-                self._plugin_distinfo.append((plugin, DistFacade(dist),))
-                count += 1
-        return count
-
     def list_plugin_distinfo(self):
         """ return list of distinfo/plugin tuples for all setuptools registered
         plugins. """
@@ -665,56 +706,16 @@ def iter_plugin_modules(
     top level module in the package... whereas with naming convention, it is
     always the top level module that gets imported and registered with the
     plugin manager.
-
-    The NAME of yielded plugins will be the name of the package provided in
-    the package METADATA file when found.  This allows for the possibility that
-    the plugin name and the module name are not the same: for instance...
-    ("napari-plugin", "napari_plugin").
-
-    Plugin packages may also provide multiple entry points, which will be
-    registered as plugins of different names.  For instance, the following
-    ``setup.py`` entry would register two plugins under the names
-    ``myplugin.register`` and ``myplugin.segment``
-
-    .. code-block:: python
-
-        import sys
-
-        setup(
-            name="napari-plugin",
-            entry_points={
-                "napari.plugin": [
-                    "myplugin.register = napari_plugin.registration",
-                    "myplugin.segment = napari_plugin.segmentation"
-                ],
-            },
-            packages=find_packages(),
-        )
-
-
-    Parameters
-    ----------
-    prefix : str, optional
-        A prefix by which to search module names.  If None, discovery by naming
-        convention is disabled., by default None
-    group : str, optional
-        An entry point group string to search.  If None, discovery by Entry
-        Points is disabled, by default None
-
-    Yields
-    -------
-    plugin_info : tuple
-        (plugin_name, module_name, metadata)
     """
     seen_modules = set()
-    if group and not os.environ.get("NAPARI_DISABLE_ENTRYPOINT_PLUGINS"):
+    if group and not os.environ.get("NAPLUGI_DISABLE_ENTRYPOINT_PLUGINS"):
         for dist, ep in entry_points_for(group):
             match = ep.pattern.match(ep.value)  # type: ignore
             if match:
                 module = match.group('module')
                 seen_modules.add(module.split(".")[0])
                 yield ep.name, module, fetch_module_metadata(dist)
-    if prefix and not os.environ.get("NAPARI_DISABLE_NAMEPREFIX_PLUGINS"):
+    if prefix and not os.environ.get("NAPLUGI_DISABLE_NAMEPREFIX_PLUGINS"):
         for module in modules_starting_with(prefix):
             if module not in seen_modules:
                 try:

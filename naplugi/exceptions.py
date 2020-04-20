@@ -23,7 +23,7 @@ class PluginValidationError(PluginError):
 
     def __init__(self, plugin, message):
         self.plugin = plugin
-        super(Exception, self).__init__(message)
+        super().__init__(message)
 
 
 class PluginCallError(PluginError):
