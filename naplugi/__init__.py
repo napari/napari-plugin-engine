@@ -1,5 +1,6 @@
 from .callers import HookCallError
-from .hooks import HookimplMarker, HookspecMarker, HookCaller
+from .markers import HookimplMarker, HookspecMarker
+from .hooks import HookCaller
 from .manager import PluginManager, PluginValidationError
 from .implementation import HookImpl, HookSpec
 
