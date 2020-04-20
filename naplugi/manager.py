@@ -159,7 +159,6 @@ class PluginManager:
             The number of plugin modules successfully loaded.
         """
         self.hook._needs_discovery = False
-        print('discover!')
         # allow debugging escape hatch
         if os.environ.get("NAPLUGI_DISABLE_PLUGINS"):
             warnings.warn(
