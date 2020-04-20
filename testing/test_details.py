@@ -9,13 +9,15 @@ hookimpl = HookimplMarker("example")
 def test_parse_hookimpl_override():
     class MyPluginManager(PluginManager):
         def parse_hookimpl_opts(self, module_or_class, name):
-            opts = PluginManager.parse_hookimpl_opts(self, module_or_class, name)
+            opts = PluginManager.parse_hookimpl_opts(
+                self, module_or_class, name
+            )
             if opts is None:
                 if name.startswith("x1"):
                     opts = {}
             return opts
 
-    class Plugin(object):
+    class Plugin:
         def x1meth(self):
             pass
 
@@ -23,7 +25,7 @@ def test_parse_hookimpl_override():
         def x1meth2(self):
             pass
 
-    class Spec(object):
+    class Spec:
         @hookspec
         def x1meth(self):
             pass
@@ -47,12 +49,12 @@ def test_parse_hookimpl_override():
 def test_warn_when_deprecated_specified(recwarn):
     warning = DeprecationWarning("foo is deprecated")
 
-    class Spec(object):
+    class Spec:
         @hookspec(warn_on_impl=warning)
         def foo(self):
             pass
 
-    class Plugin(object):
+    class Plugin:
         @hookimpl
         def foo(self):
             pass
@@ -73,11 +75,11 @@ def test_plugin_getattr_raises_errors():
     when getattr() gets called (#11).
     """
 
-    class DontTouchMe(object):
+    class DontTouchMe:
         def __getattr__(self, x):
             raise Exception("cant touch me")
 
-    class Module(object):
+    class Module:
         pass
 
     module = Module()

@@ -53,7 +53,7 @@ class PluginValidationError(Exception):
         super(Exception, self).__init__(message)
 
 
-class DistFacade(object):
+class DistFacade:
     """Emulate a pkg_resources Distribution"""
 
     def __init__(self, dist):
@@ -70,7 +70,7 @@ class DistFacade(object):
         return sorted(dir(self._dist) + ["_dist", "project_name"])
 
 
-class PluginManager(object):
+class PluginManager:
     """ Core :py:class:`.PluginManager` class which manages registration
     of plugin objects and 1:N hook calling.
 

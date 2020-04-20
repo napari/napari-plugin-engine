@@ -9,11 +9,11 @@ def test_varnames():
     def f(x):
         i = 3  # noqa
 
-    class A(object):
+    class A:
         def f(self, y):
             pass
 
-    class B(object):
+    class B:
         def __call__(self, z):
             pass
 
@@ -30,18 +30,18 @@ def test_varnames_default():
 
 
 def test_varnames_class():
-    class C(object):
+    class C:
         def __init__(self, x):
             pass
 
-    class D(object):
+    class D:
         pass
 
-    class E(object):
+    class E:
         def __init__(self, x):
             pass
 
-    class F(object):
+    class F:
         pass
 
     assert varnames(C) == (("x",), ())
