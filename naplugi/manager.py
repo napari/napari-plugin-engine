@@ -19,7 +19,7 @@ from typing import (
 
 from . import _tracing
 from .callers import HookResult
-from .hooks import HookCaller, normalize_hookimpl_opts, HookExecFunc
+from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImpl
 from .exceptions import PluginError, PluginImportError, PluginRegistrationError
 
@@ -287,7 +287,6 @@ class PluginManager(object):
         for name in dir(plugin):
             hookimpl_opts = self.parse_hookimpl_opts(plugin, name)
             if hookimpl_opts is not None:
-                normalize_hookimpl_opts(hookimpl_opts)
                 method = getattr(plugin, name)
                 hookimpl = HookImpl(plugin, plugin_name, method, hookimpl_opts)
                 name = hookimpl_opts.get("specname") or name

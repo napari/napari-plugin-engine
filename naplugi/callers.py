@@ -1,6 +1,4 @@
-"""
-Call loop machinery
-"""
+"""Call loop machinery.ƒ"""
 import sys
 from types import TracebackType
 from typing import Any, List, Optional, Tuple, Union, Type
@@ -125,25 +123,6 @@ class HookResult:
             if value:
                 raise value.with_traceback(traceback)
         return self._result
-
-
-def _wrapped_call(wrap_controller, func):
-    """ Wrap calling to a function with a generator which needs to yield
-    exactly once.  The yield point will trigger calling the wrapped function
-    and return its ``HookResult`` to the yield point.  The generator then needs
-    to finish (raise StopIteration) in order for the wrapped call to complete.
-    """
-    try:
-        next(wrap_controller)  # first yield
-    except StopIteration:
-        _raise_wrapfail(wrap_controller, "did not yield")
-    call_outcome = HookResult.from_call(func)
-    try:
-        wrap_controller.send(call_outcome)
-        _raise_wrapfail(wrap_controller, "has second yield")
-    except StopIteration:
-        pass
-    return call_outcome.result
 
 
 def _multicall(
