@@ -10,6 +10,22 @@ class PluginRegistrationError(PluginError):
     pass
 
 
+class HookCallError(PluginError):
+    """ Hook was called wrongly. """
+
+
+class PluginValidationError(PluginError):
+    """ plugin failed validation.
+
+    :param object plugin: the plugin which failed validation,
+        may be a module or an arbitrary object.
+    """
+
+    def __init__(self, plugin, message):
+        self.plugin = plugin
+        super(Exception, self).__init__(message)
+
+
 class PluginCallError(PluginError):
     """Raised when an error is raised when calling a plugin implementation."""
 

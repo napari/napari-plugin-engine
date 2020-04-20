@@ -21,7 +21,12 @@ from . import _tracing
 from .callers import HookResult
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImpl
-from .exceptions import PluginError, PluginImportError, PluginRegistrationError
+from .exceptions import (
+    PluginError,
+    PluginImportError,
+    PluginRegistrationError,
+    PluginValidationError,
+)
 
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
@@ -30,27 +35,6 @@ else:
 
 
 logger = getLogger(__name__)
-
-
-def _warn_for_function(warning, function):
-    warnings.warn_explicit(
-        warning,
-        type(warning),
-        lineno=function.__code__.co_firstlineno,
-        filename=function.__code__.co_filename,
-    )
-
-
-class PluginValidationError(Exception):
-    """ plugin failed validation.
-
-    :param object plugin: the plugin which failed validation,
-        may be a module or an arbitrary object.
-    """
-
-    def __init__(self, plugin, message):
-        self.plugin = plugin
-        super(Exception, self).__init__(message)
 
 
 class DistFacade:
@@ -420,9 +404,13 @@ class PluginManager:
                 % (hookimpl.plugin_name, hook.name,),
             )
         if hook.spec.warn_on_impl:
-            _warn_for_function(
-                hook.spec.warn_on_impl, hookimpl.function,
+            warnings.warn_explicit(
+                hook.spec.warn_on_impl,
+                type(hook.spec.warn_on_impl),
+                lineno=hookimpl.function.__code__.co_firstlineno,
+                filename=hookimpl.function.__code__.co_filename,
             )
+
         # positional arg checking
         notinspec = set(hookimpl.argnames) - set(hook.spec.argnames)
         if notinspec:

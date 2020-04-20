@@ -2,7 +2,7 @@
 import sys
 from types import TracebackType
 from typing import Any, List, Optional, Tuple, Union, Type
-from .exceptions import PluginCallError
+from .exceptions import PluginCallError, HookCallError
 from .implementation import HookImpl
 
 
@@ -12,10 +12,6 @@ def _raise_wrapfail(wrap_controller, msg):
         "wrap_controller at %r %s:%d %s"
         % (co.co_name, co.co_filename, co.co_firstlineno, msg)
     )
-
-
-class HookCallError(Exception):
-    """ Hook was called wrongly. """
 
 
 ExcInfo = Union[
