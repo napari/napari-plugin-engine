@@ -17,6 +17,7 @@ from typing import (
     Tuple,
     Type,
     Union,
+    Set,
 )
 
 from . import _tracing
@@ -104,7 +105,7 @@ class PluginManager:
         self.trace = _tracing.TagTracer().get("pluginmanage")
         self.hook = _HookRelay(self)
         self.hook._needs_discovery = True
-
+        self._blocked: Set[str] = set()
         # discover external plugins
         self.discover_entrypoint = discover_entrypoint
         self.discover_prefix = discover_prefix
@@ -214,9 +215,11 @@ class PluginManager:
                 except Exception as exc:
                     err = PluginImportError(
                         f'Error while importing plugin "{ep.name}" entry_point'
-                        f' "{ep.value}": {str(exc)}'
+                        f' "{ep.value}": {str(exc)}',
+                        plugin_name=ep.name,
+                        manager=self,
+                        cause=exc,
                     )
-                    err.__cause__ = exc
                     errors.append(err)
                     self.set_blocked(ep.name)
                     if ignore_errors:
@@ -224,9 +227,10 @@ class PluginManager:
                     raise err
                 if not (inspect.isclass(plugin) or inspect.ismodule(plugin)):
                     err = PluginValidationError(
-                        plugin,
                         f'Plugin "{ep.name}" declared entry_point "{ep.value}"'
                         ' which is neither a module nor a class.',
+                        plugin_name=ep.name,
+                        manager=self,
                     )
                     errors.append(err)
                     self.set_blocked(ep.name)
@@ -241,8 +245,9 @@ class PluginManager:
                 try:
                     self.register(plugin, name=ep.name)
                 except Exception as exc:
-                    err = PluginRegistrationError(plugin)
-                    err.__cause__ = exc
+                    err = PluginRegistrationError(
+                        plugin_name=ep.name, manager=self, cause=exc,
+                    )
                     errors.append(err)
                     self.set_blocked(ep.name)
                     if ignore_errors:
@@ -264,13 +269,17 @@ class PluginManager:
                 if self.get_plugin(mod_name) or self.is_blocked(mod_name):
                     continue
                 err: Optional[PluginError] = None
+                dist_facade = DistFacade(module_to_dist().get(mod_name))
+                name = dist_facade.project_name or mod_name
                 try:
                     plugin = importlib.import_module(mod_name)
                 except Exception as exc:
                     err = PluginImportError(
-                        f'Error while importing module {mod_name}'
+                        f'Error while importing module {mod_name}',
+                        plugin_name=name,
+                        manager=self,
+                        cause=exc,
                     )
-                    err.__cause__ = exc
                     errors.append(err)
                     self.set_blocked(mod_name)
                     if ignore_errors:
@@ -279,14 +288,13 @@ class PluginManager:
                 if self.is_registered(plugin):
                     continue
 
-                dist_facade = DistFacade(module_to_dist().get(mod_name))
                 self._plugin_distinfo[plugin] = dist_facade
-                name = dist_facade.project_name or mod_name
                 try:
                     self.register(plugin, name)
                 except Exception as exc:
-                    err = PluginRegistrationError(plugin)
-                    err.__cause__ = exc
+                    err = PluginRegistrationError(
+                        plugin_name=name, manager=self, cause=exc,
+                    )
                     errors.append(err)
                     self.set_blocked(name)
                     if ignore_errors:
@@ -320,13 +328,13 @@ class PluginManager:
         """
         plugin_name = name or self.get_canonical_name(plugin)
 
+        if self.is_blocked(plugin_name):
+            return
+
         if (
             plugin_name in self._name2plugin
             or plugin in self._plugin2hookcallers
         ):
-            if self._name2plugin.get(plugin_name, -1) is None:
-                # blocked plugin, return None to indicate no registration
-                return
             raise ValueError(
                 "Plugin already registered: %s=%s\n%s"
                 % (plugin_name, plugin, self._name2plugin)
@@ -389,14 +397,18 @@ class PluginManager:
 
         return plugin
 
-    def set_blocked(self, name):
+    def set_blocked(self, plugin_name: str, blocked=True):
         """ block registrations of the given name, unregister if already registered. """
-        self.unregister(name=name)
-        self._name2plugin[name] = None
+        if blocked:
+            self.unregister(name=plugin_name)
+            self._blocked.add(plugin_name)
+        else:
+            if plugin_name in self._blocked:
+                self._blocked.remove(plugin_name)
 
-    def is_blocked(self, name):
+    def is_blocked(self, plugin_name: str) -> bool:
         """ return ``True`` if the given plugin name is blocked. """
-        return name in self._name2plugin and self._name2plugin[name] is None
+        return plugin_name in self._blocked
 
     def add_hookspecs(self, module_or_class):
         """ add new hook specifications defined in the given ``module_or_class``.
@@ -466,12 +478,23 @@ class PluginManager:
             if plugin == val:
                 return name
 
+    def get_errors(
+        self,
+        plugin_name: str = Ellipsis,
+        error_type: Type[BaseException] = Ellipsis,
+    ) -> List[PluginError]:
+        """Return a list of PluginErrors associated with this manager."""
+        return PluginError.get(
+            manager=self, plugin_name=plugin_name, error_type=error_type
+        )
+
     def _verify_hook(self, hook, hookimpl):
         if hook.is_historic() and hookimpl.hookwrapper:
             raise PluginValidationError(
-                hookimpl.plugin,
-                "Plugin %r\nhook %r\nhistoric incompatible to hookwrapper"
-                % (hookimpl.plugin_name, hook.name,),
+                f"Plugin {hookimpl.plugin_name!r}\nhook "
+                f"{hook.name!r}\nhistoric incompatible to hookwrapper",
+                plugin_name=hookimpl.plugin_name,
+                manager=self,
             )
         if hook.spec.warn_on_impl:
             warnings.warn_explicit(
@@ -485,16 +508,12 @@ class PluginManager:
         notinspec = set(hookimpl.argnames) - set(hook.spec.argnames)
         if notinspec:
             raise PluginValidationError(
-                hookimpl.plugin,
-                "Plugin %r for hook %r\nhookimpl definition: %s\n"
-                "Argument(s) %s are declared in the hookimpl but "
-                "can not be found in the hookspec"
-                % (
-                    hookimpl.plugin_name,
-                    hook.name,
-                    _formatdef(hookimpl.function),
-                    notinspec,
-                ),
+                f"Plugin {hookimpl.plugin_name!r} for hook {hook.name!r}\n"
+                f"hookimpl definition: {_formatdef(hookimpl.function)}\n"
+                f"Argument(s) {notinspec} are declared in the hookimpl but "
+                "can not be found in the hookspec",
+                plugin_name=hookimpl.plugin_name,
+                manager=self,
             )
 
     def check_pending(self):
@@ -508,9 +527,10 @@ class PluginManager:
                     for hookimpl in hook.get_hookimpls():
                         if not hookimpl.optionalhook:
                             raise PluginValidationError(
-                                hookimpl.plugin,
-                                "unknown hook %r in plugin %r"
-                                % (name, hookimpl.plugin,),
+                                f"unknown hook {name!r} in "
+                                f"plugin {hookimpl.plugin!r}",
+                                plugin_name=hookimpl.plugin_name,
+                                manager=self,
                             )
 
     def list_plugin_distinfo(self):

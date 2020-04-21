@@ -1,4 +1,9 @@
-from .exceptions import HookCallError, PluginValidationError, PluginCallError
+from .exceptions import (
+    PluginError,
+    HookCallError,
+    PluginValidationError,
+    PluginCallError,
+)
 from .markers import HookimplMarker, HookspecMarker
 from .hooks import HookCaller
 from .manager import PluginManager
@@ -20,7 +25,8 @@ __all__ = [
     "HookspecMarker",
     "napari_hook_implementation",
     "napari_hook_specification",
-    "PluginManager",
     "PluginCallError",
+    "PluginError",
+    "PluginManager",
     "PluginValidationError",
 ]

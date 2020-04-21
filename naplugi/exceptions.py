@@ -1,5 +1,66 @@
+from typing import Optional, Union, Type, TYPE_CHECKING, List
+from types import ModuleType
+
+ClassOrModule = Union[ModuleType, Type]
+
+if TYPE_CHECKING:
+    from .manager import PluginManager  # noqa: F401
+
+
 class PluginError(Exception):
-    pass
+    _record: List['PluginError'] = []
+
+    def __init__(
+        self,
+        message: str = '',
+        *,
+        plugin_name: str = '',
+        manager: Optional['PluginManager'] = None,
+        cause: Optional[BaseException] = None,
+    ):
+        if not message:
+            message = f'Error in plugin "{plugin_name}"'
+            if cause:
+                message += f': {cause}'
+        super().__init__(message)
+        self.manager = manager
+        self.plugin_name = plugin_name
+        self.__cause__ = cause
+        # store all PluginError instances.  can be retrieved with get()
+        PluginError._record.append(self)
+
+    @property
+    def plugin(self) -> Optional[ClassOrModule]:
+        if self.manager:
+            return self.manager.get_plugin(self.plugin_name)
+
+    @classmethod
+    def get(
+        cls,
+        manager: Optional['PluginManager'] = Ellipsis,
+        plugin_name: str = Ellipsis,
+        error_type: Type[BaseException] = Ellipsis,
+    ) -> List['PluginError']:
+        errors: List['PluginError'] = []
+        for error in cls._record:
+            if manager is not Ellipsis and error.manager != manager:
+                continue
+            if plugin_name is not Ellipsis and error.plugin_name != error:
+                continue
+            if error_type is not Ellipsis:
+                import inspect
+
+                if not (
+                    inspect.isclass(error_type)
+                    and issubclass(error_type, BaseException)
+                ):
+                    raise TypeError(
+                        "The `error_type` argument must be an exception class"
+                    )
+                if not isinstance(error.__cause__, error_type):
+                    continue
+            errors.append(error)
+        return errors
 
 
 class PluginImportError(PluginError, ImportError):
@@ -7,9 +68,7 @@ class PluginImportError(PluginError, ImportError):
 
 
 class PluginRegistrationError(PluginError):
-    def __init__(self, plugin, message=''):
-        self.plugin = plugin
-        super().__init__(message)
+    pass
 
 
 class HookCallError(PluginError):
@@ -23,9 +82,7 @@ class PluginValidationError(PluginError):
         may be a module or an arbitrary object.
     """
 
-    def __init__(self, plugin, message=''):
-        self.plugin = plugin
-        super().__init__(message)
+    pass
 
 
 class PluginCallError(PluginError):
