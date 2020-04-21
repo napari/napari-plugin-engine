@@ -50,7 +50,7 @@ class HookCaller:
     def is_historic(self) -> bool:
         return hasattr(self, "_call_history")
 
-    def _remove_plugin(self, plugin: ModuleType):
+    def _remove_plugin(self, plugin: ClassOrModule):
         def remove(wrappers):
             for i, method in enumerate(wrappers):
                 if method.plugin == plugin:

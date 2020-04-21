@@ -72,6 +72,70 @@ class DistFacade:
         return sorted(dir(self._dist) + ["_dist", "project_name"])
 
 
+class Plugin:
+    def __init__(
+        self, class_or_module: ClassOrModule, name: Optional[str] = None
+    ):
+        self.object = class_or_module
+        self._name = name
+        self._hookcallers: List[HookCaller] = []
+
+    def __repr__(self):
+        return (
+            f'<Plugin "{self.name}" from '
+            f'"{self.object.__name__}" with {self.nhooks} hooks>'
+        )
+
+    @property
+    def file(self):
+        return self.object.__file__
+
+    @property
+    def nhooks(self):
+        return len(self._hookcallers)
+
+    @property
+    def name(self):
+        return self._name or self.get_canonical_name(self.object)
+
+    @classmethod
+    def get_canonical_name(cls, plugin: ClassOrModule):
+        """ Return canonical name for a plugin object.
+        Note that a plugin may be registered under a different name which was
+        specified by the caller of :meth:`PluginManager.register(plugin, name)
+        <.PluginManager.register>`. To obtain the name of a registered plugin
+        use :meth:`get_name(plugin) <.PluginManager.get_name>` instead."""
+        return getattr(plugin, "__name__", None) or str(id(plugin))
+
+    def iter_implementations(self, project_name):
+        # register matching hook implementations of the plugin
+        for name in dir(self.object):
+            # check all attributes/methods of plugin and look for functions or
+            # methods that have a "{self.project_name}_impl" attribute.
+            method = getattr(self.object, name)
+            if not inspect.isroutine(method):
+                continue
+            # TODO, make "_impl" a HookImpl class attribute
+            hookimpl_opts = getattr(method, project_name + "_impl", None)
+            if not hookimpl_opts:
+                continue
+
+            # create the HookImpl instance for this method
+            # TODO: make HookImpl accept a Plugin instance
+            # TODO: maybe make this **hookimpl_opts?
+            yield HookImpl(self.object, self.name, method, hookimpl_opts)
+
+    @property
+    def dist(self) -> Optional[importlib_metadata.Distribution]:
+        top_level = self.object.__name__.split('.')[0]
+        return module_to_dist().get(top_level)
+
+    def get_metadata(self, name: str):
+        dist = self.dist
+        if dist:
+            return self.dist.metadata.get(name)
+
+
 class PluginManager:
     """ Core :py:class:`.PluginManager` class which manages registration
     of plugin objects and 1:N hook calling.
@@ -98,10 +162,11 @@ class PluginManager:
     ):
         self.project_name = project_name
         # mapping of name -> module
+
+        self._plugins: Dict[str, Plugin] = {}
         self._name2plugin: Dict[str, ClassOrModule] = {}
         # mapping of name -> module
         self._plugin2hookcallers: Dict[ClassOrModule, List[HookCaller]] = {}
-        self._plugin_distinfo: Dict[ClassOrModule, DistFacade] = {}
         self.trace = _tracing.TagTracer().get("pluginmanage")
         self.hook = _HookRelay(self)
         self.hook._needs_discovery = True
@@ -200,6 +265,8 @@ class PluginManager:
         errors: List[PluginError] = []
         for dist in importlib_metadata.distributions():
             for ep in dist.entry_points:
+                if self.name_is_registered(ep.name):
+                    continue
                 if (
                     ep.group != group  # type: ignore
                     or (name and ep.name != name)
@@ -237,10 +304,6 @@ class PluginManager:
                     if ignore_errors:
                         continue
                     raise err
-                if self.is_registered(plugin):
-                    continue
-
-                self._plugin_distinfo[plugin] = DistFacade(dist)
 
                 try:
                     self.register(plugin, name=ep.name)
@@ -266,11 +329,18 @@ class PluginManager:
         errors: List[PluginError] = []
         for finder, mod_name, ispkg in pkgutil.iter_modules():
             if mod_name.startswith(prefix):
-                if self.get_plugin(mod_name) or self.is_blocked(mod_name):
+                dist = module_to_dist().get(mod_name)
+                name = dist.metadata.get("name") if dist else mod_name
+                if self.name_is_registered(name):
+                    continue
+
+                if self.get_plugin(mod_name) or self.is_blocked(name):
+                    continue
+                # FIXME
+                if self.module_is_registered(mod_name):
                     continue
                 err: Optional[PluginError] = None
-                dist_facade = DistFacade(module_to_dist().get(mod_name))
-                name = dist_facade.project_name or mod_name
+
                 try:
                     plugin = importlib.import_module(mod_name)
                 except Exception as exc:
@@ -281,14 +351,11 @@ class PluginManager:
                         cause=exc,
                     )
                     errors.append(err)
-                    self.set_blocked(mod_name)
+                    self.set_blocked(name)
                     if ignore_errors:
                         continue
                     raise err
-                if self.is_registered(plugin):
-                    continue
 
-                self._plugin_distinfo[plugin] = dist_facade
                 try:
                     self.register(plugin, name)
                 except Exception as exc:
@@ -305,7 +372,7 @@ class PluginManager:
 
         return count, errors
 
-    def register(self, plugin: ClassOrModule, name=None):
+    def register(self, class_or_module: ClassOrModule, name=None):
         """Register a plugin and return its canonical name or ``None``.
 
         Parameters
@@ -326,88 +393,50 @@ class PluginManager:
         ValueError
             if the plugin is already registered.
         """
-        plugin_name = name or self.get_canonical_name(plugin)
+        plugin_name = name or Plugin.get_canonical_name(class_or_module)
 
         if self.is_blocked(plugin_name):
             return
 
-        if (
-            plugin_name in self._name2plugin
-            or plugin in self._plugin2hookcallers
-        ):
+        if self.name_is_registered(plugin_name):
+            _plugin = self._plugins[plugin_name]
             raise ValueError(
-                "Plugin already registered: %s=%s\n%s"
-                % (plugin_name, plugin, self._name2plugin)
+                f"Plugin already registered: {plugin_name}={_plugin!r}"
             )
 
-        # XXX if an error happens we should make sure no state has been
-        # changed at point of return
-        self._name2plugin[plugin_name] = plugin
+        _plugin = Plugin(class_or_module, name)
+        self._plugins[plugin_name] = _plugin
+        for hookimpl in _plugin.iter_implementations(self.project_name):
+            name = hookimpl.get_specname()
+            hook_caller = getattr(self.hook, name, None)
+            # if we don't yet have a hookcaller by this name, create one.
+            if hook_caller is None:
+                hook_caller = HookCaller(name, self._hookexec)
+                setattr(self.hook, name, hook_caller)
+            # otherwise, if it has a specification, validate the new
+            # hookimpl against the specification.
+            elif hook_caller.has_spec():
+                self._verify_hook(hook_caller, hookimpl)
+                hook_caller._maybe_apply_history(hookimpl)
+            # Finally, add the hookimpl to the hook_caller and the hook
+            # caller to the list of callers for this plugin.
+            hook_caller._add_hookimpl(hookimpl)
+            _plugin._hookcallers.append(hook_caller)
 
-        # register matching hook implementations of the plugin
-        self._plugin2hookcallers[plugin] = []
-        for name in dir(plugin):
-            # check all attributes/methods of plugin and look for functions and
-            # methods that have a "{self.project_name}_impl" attribute.
-            hookimpl_opts = self.parse_hookimpl_opts(plugin, name)
-            if hookimpl_opts is not None:
-                method = getattr(plugin, name)
-                # create the HookImpl instance for this method
-                # TODO: make HookImpl accept a Plugin instance
-                # TODO: maybe make this **hookimpl_opts?
-                hookimpl = HookImpl(plugin, plugin_name, method, hookimpl_opts)
-                # add it self.hook
-                # TODO: add a method to HookImpl that returns specname
-                name = hookimpl_opts.get("specname") or name
-                hook_caller = getattr(self.hook, name, None)
-                # if we don't yet have a hookcaller by this name, create one.
-                if hook_caller is None:
-                    hook_caller = HookCaller(name, self._hookexec)
-                    setattr(self.hook, name, hook_caller)
-                # otherwise, if it has a specification, validate the new
-                # hookimpl against the specification.
-                elif hook_caller.has_spec():
-                    self._verify_hook(hook_caller, hookimpl)
-                    hook_caller._maybe_apply_history(hookimpl)
-                # Finally, add the hookimpl to the hook_caller and the hook
-                # caller to the list of callers for this plugin.
-                hook_caller._add_hookimpl(hookimpl)
-                # TODO: _plugin2hookcallers should probably live on Plugin
-                self._plugin2hookcallers[plugin].append(hook_caller)
         return plugin_name
 
-    def parse_hookimpl_opts(self, plugin: ClassOrModule, name: str):
-        """Look for "{self.project_name}_impl" on method and return opts."""
-        method = getattr(plugin, name)
-        if not inspect.isroutine(method):
-            return
-        try:
-            res = getattr(method, self.project_name + "_impl", None,)
-        except Exception:
-            res = {}
-        if res is not None and not isinstance(res, dict):
-            # false positive
-            res = None
-        return res
-
-    def unregister(self, plugin=None, name=None):
+    def unregister(self, plugin_name: str) -> Plugin:
         """ unregister a plugin object and all its contained hook implementations
         from internal data structures. """
-        if name is None:
-            assert (
-                plugin is not None
-            ), "one of name or plugin needs to be specified"
-            name = self.get_name(plugin)
 
-        if plugin is None:
-            plugin = self.get_plugin(name)
+        if plugin_name not in self._plugins:
+            raise ValueError(
+                f'No plugins registered under the name {plugin_name}'
+            )
 
-        # if self._name2plugin[name] == None registration was blocked: ignore
-        if self._name2plugin.get(name):
-            del self._name2plugin[name]
-
-        for hookcaller in self._plugin2hookcallers.pop(plugin, []):
-            hookcaller._remove_plugin(plugin)
+        plugin = self._plugins.pop(plugin_name)
+        for hook_caller in plugin._hookcallers:
+            hook_caller._remove_plugin(plugin.object)
 
         return plugin
 
@@ -424,12 +453,14 @@ class PluginManager:
         """ return ``True`` if the given plugin name is blocked. """
         return plugin_name in self._blocked
 
-    def add_hookspecs(self, module_or_class):
+    def add_hookspecs(self, module_or_class: ClassOrModule):
         """ add new hook specifications defined in the given ``module_or_class``.
         Functions are recognized if they have been decorated accordingly. """
         names = []
         for name in dir(module_or_class):
-            spec_opts = self.parse_hookspec_opts(module_or_class, name)
+            method = getattr(module_or_class, name)
+            # TODO: make `_spec` a class attribute of HookSpec
+            spec_opts = getattr(method, self.project_name + "_spec", None)
             if spec_opts is not None:
                 hc = getattr(self.hook, name, None,)
                 if hc is None:
@@ -456,31 +487,22 @@ class PluginManager:
                 % (self.project_name, module_or_class,)
             )
 
-    def parse_hookspec_opts(
-        self, module_or_class: ClassOrModule, name: str
-    ) -> Optional[dict]:
-        method = getattr(module_or_class, name)
-        return getattr(method, self.project_name + "_spec", None)
-
     def get_plugins(self):
         """ return the set of registered plugins. """
-        return set(self._plugin2hookcallers)
+        return set(self._plugins)
 
-    def is_registered(self, plugin):
+    def module_is_registered(self, module_name: str):
+        return any(
+            [p.object.__name__ == module_name for p in self._plugins.values()]
+        )
+
+    def name_is_registered(self, plugin_name: str):
         """ Return ``True`` if the plugin is already registered. """
-        return plugin in self._plugin2hookcallers
-
-    def get_canonical_name(self, plugin):
-        """ Return canonical name for a plugin object. Note that a plugin
-        may be registered under a different name which was specified
-        by the caller of :py:meth:`register(plugin, name) <.PluginManager.register>`.
-        To obtain the name of an registered plugin use :py:meth:`get_name(plugin)
-        <.PluginManager.get_name>` instead."""
-        return getattr(plugin, "__name__", None) or str(id(plugin))
+        return plugin_name in self._plugins
 
     def get_plugin(self, name):
         """ Return a plugin or ``None`` for the given name. """
-        return self._name2plugin.get(name)
+        return self._plugins.get(name)
 
     def has_plugin(self, name):
         """ Return ``True`` if a plugin with the given name is registered. """
@@ -672,7 +694,7 @@ class _HookRelay:
 
 
 @lru_cache(maxsize=1)
-def module_to_dist():
+def module_to_dist() -> Dict[str, importlib_metadata.Distribution]:
     mapping = {}
     for dist in importlib_metadata.distributions():
         modules = dist.read_text('top_level.txt')
