@@ -13,7 +13,7 @@ def multicall(methods, kwargs, firstresult=False):
     caller = _multicall
     hookfuncs = []
     for method in methods:
-        f = HookImpl(None, "<temp>", method, method.example_impl)
+        f = HookImpl(method, **method.example_impl)
         hookfuncs.append(f)
     # our _multicall function returns our own HookResult object.
     # so to make these pluggy tests pass, we have to access .result to mimic

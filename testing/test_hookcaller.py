@@ -25,9 +25,7 @@ def addmeth(hook_caller):
             example_implementation(
                 tryfirst=tryfirst, trylast=trylast, hookwrapper=hookwrapper
             )(func)
-            hook_caller._add_hookimpl(
-                HookImpl(None, "<temp>", func, func.example_impl)
-            )
+            hook_caller._add_hookimpl(HookImpl(func, **func.example_impl))
             return func
 
         return wrap

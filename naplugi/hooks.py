@@ -108,9 +108,7 @@ class HookCaller:
         methods using the specified ``kwargs`` as call parameters. """
         old = list(self._nonwrappers), list(self._wrappers)
         for method in methods:
-            opts = dict(hookwrapper=False, trylast=False, tryfirst=False)
-            hookimpl = HookImpl(None, "<temp>", method, opts)
-            self._add_hookimpl(hookimpl)
+            self._add_hookimpl(HookImpl(method))
         try:
             return self(**kwargs)
         finally:
@@ -332,7 +330,7 @@ class HookCaller:
                     )
 
         try:
-            return implementation.function(*_args)
+            return implementation(*_args)
         except Exception as exc:
             raise PluginCallError(implementation) from exc
 

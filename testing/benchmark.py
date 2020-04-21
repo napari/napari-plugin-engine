@@ -13,7 +13,7 @@ hookimpl = HookimplMarker("example")
 def MC(methods, kwargs, callertype, firstresult=False):
     hookfuncs = []
     for method in methods:
-        f = HookImpl(None, "<temp>", method, method.example_impl)
+        f = HookImpl(method, **method.example_impl)
         hookfuncs.append(f)
     return callertype(hookfuncs, kwargs, firstresult=firstresult)
 

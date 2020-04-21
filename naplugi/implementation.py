@@ -1,7 +1,10 @@
 import inspect
 import sys
 from types import ModuleType
-from typing import Callable, Union, Type, Optional
+from typing import Callable, Union, Type, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .manager import Plugin  # noqa: F401
 
 ClassOrModule = Union[ModuleType, Type]
 
@@ -9,24 +12,46 @@ ClassOrModule = Union[ModuleType, Type]
 class HookImpl:
     def __init__(
         self,
-        plugin: Optional[ClassOrModule],
-        plugin_name: str,
         function: Callable,
-        hook_impl_opts: dict,
+        plugin: Optional['Plugin'] = None,
+        hookwrapper: bool = False,
+        optionalhook: bool = False,
+        tryfirst: bool = False,
+        trylast: bool = False,
+        specname: str = '',
         enabled: bool = True,
     ):
         self.function = function
         self.argnames, self.kwargnames = varnames(self.function)
-        self.plugin = plugin
-        self.opts = hook_impl_opts
-        self.plugin_name = plugin_name
-        self.hookwrapper: bool = False
-        self.optionalhook: bool = False
-        self.tryfirst: bool = False
-        self.trylast: bool = False
-        self.specname: str = ''
+        self._plugin = plugin
+        self.hookwrapper = hookwrapper
+        self.optionalhook = optionalhook
+        self.tryfirst = tryfirst
+        self.trylast = trylast
+        self._specname = specname
         self.enabled = enabled
-        self.__dict__.update(hook_impl_opts)
+
+    @property
+    def plugin(self):
+        return self._plugin.object if self._plugin else None
+
+    @property
+    def plugin_name(self):
+        return self._plugin.name if self._plugin else None
+
+    @property
+    def opts(self):
+        # legacy
+        return {
+            x: getattr(self, x)
+            for x in [
+                'hookwrapper',
+                'optionalhook',
+                'tryfirst',
+                'trylast',
+                'specname',
+            ]
+        }
 
     def __repr__(self) -> str:
         return "<HookImpl plugin_name=%r, plugin=%r>" % (
@@ -37,8 +62,9 @@ class HookImpl:
     def __call__(self, *args):
         return self.function(*args)
 
-    def get_specname(self) -> str:
-        return self.specname or self.function.__name__
+    @property
+    def specname(self) -> str:
+        return self._specname or self.function.__name__
 
 
 class HookSpec:

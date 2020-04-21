@@ -180,7 +180,7 @@ def _multicall(
 
                 if hook_impl.hookwrapper:
                     try:
-                        gen = hook_impl.function(*args)
+                        gen = hook_impl(*args)
                         next(gen)  # first yield
                         teardowns.append(gen)
                     except StopIteration:
@@ -191,7 +191,7 @@ def _multicall(
                     # we put it in a try/except so that if one plugin throws
                     # an exception, we don't lose the whole loop
                     try:
-                        res = hook_impl.function(*args)
+                        res = hook_impl(*args)
                     except Exception as exc:
                         # creating a PluginCallError will store it for later
                         # in plugins.exceptions.PLUGIN_ERRORS
