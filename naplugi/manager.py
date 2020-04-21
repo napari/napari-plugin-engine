@@ -347,23 +347,37 @@ class PluginManager:
         # register matching hook implementations of the plugin
         self._plugin2hookcallers[plugin] = []
         for name in dir(plugin):
+            # check all attributes/methods of plugin and look for functions and
+            # methods that have a "{self.project_name}_impl" attribute.
             hookimpl_opts = self.parse_hookimpl_opts(plugin, name)
             if hookimpl_opts is not None:
                 method = getattr(plugin, name)
+                # create the HookImpl instance for this method
+                # TODO: make HookImpl accept a Plugin instance
+                # TODO: maybe make this **hookimpl_opts?
                 hookimpl = HookImpl(plugin, plugin_name, method, hookimpl_opts)
+                # add it self.hook
+                # TODO: add a method to HookImpl that returns specname
                 name = hookimpl_opts.get("specname") or name
-                hook = getattr(self.hook, name, None)
-                if hook is None:
-                    hook = HookCaller(name, self._hookexec)
-                    setattr(self.hook, name, hook)
-                elif hook.has_spec():
-                    self._verify_hook(hook, hookimpl)
-                    hook._maybe_apply_history(hookimpl)
-                hook._add_hookimpl(hookimpl)
-                self._plugin2hookcallers[plugin].append(hook)
+                hook_caller = getattr(self.hook, name, None)
+                # if we don't yet have a hookcaller by this name, create one.
+                if hook_caller is None:
+                    hook_caller = HookCaller(name, self._hookexec)
+                    setattr(self.hook, name, hook_caller)
+                # otherwise, if it has a specification, validate the new
+                # hookimpl against the specification.
+                elif hook_caller.has_spec():
+                    self._verify_hook(hook_caller, hookimpl)
+                    hook_caller._maybe_apply_history(hookimpl)
+                # Finally, add the hookimpl to the hook_caller and the hook
+                # caller to the list of callers for this plugin.
+                hook_caller._add_hookimpl(hookimpl)
+                # TODO: _plugin2hookcallers should probably live on Plugin
+                self._plugin2hookcallers[plugin].append(hook_caller)
         return plugin_name
 
-    def parse_hookimpl_opts(self, plugin, name):
+    def parse_hookimpl_opts(self, plugin: ClassOrModule, name: str):
+        """Look for "{self.project_name}_impl" on method and return opts."""
         method = getattr(plugin, name)
         if not inspect.isroutine(method):
             return
@@ -488,28 +502,28 @@ class PluginManager:
             manager=self, plugin_name=plugin_name, error_type=error_type
         )
 
-    def _verify_hook(self, hook, hookimpl):
-        if hook.is_historic() and hookimpl.hookwrapper:
+    def _verify_hook(self, hook_caller, hookimpl):
+        if hook_caller.is_historic() and hookimpl.hookwrapper:
             raise PluginValidationError(
                 f"Plugin {hookimpl.plugin_name!r}\nhook "
-                f"{hook.name!r}\nhistoric incompatible to hookwrapper",
+                f"{hook_caller.name!r}\nhistoric incompatible to hookwrapper",
                 plugin_name=hookimpl.plugin_name,
                 manager=self,
             )
-        if hook.spec.warn_on_impl:
+        if hook_caller.spec.warn_on_impl:
             warnings.warn_explicit(
-                hook.spec.warn_on_impl,
-                type(hook.spec.warn_on_impl),
+                hook_caller.spec.warn_on_impl,
+                type(hook_caller.spec.warn_on_impl),
                 lineno=hookimpl.function.__code__.co_firstlineno,
                 filename=hookimpl.function.__code__.co_filename,
             )
 
         # positional arg checking
-        notinspec = set(hookimpl.argnames) - set(hook.spec.argnames)
+        notinspec = set(hookimpl.argnames) - set(hook_caller.spec.argnames)
         if notinspec:
             raise PluginValidationError(
-                f"Plugin {hookimpl.plugin_name!r} for hook {hook.name!r}\n"
-                f"hookimpl definition: {_formatdef(hookimpl.function)}\n"
+                f"Plugin {hookimpl.plugin_name!r} for hook {hook_caller.name!r}"
+                f"\nhookimpl definition: {_formatdef(hookimpl.function)}\n"
                 f"Argument(s) {notinspec} are declared in the hookimpl but "
                 "can not be found in the hookspec",
                 plugin_name=hookimpl.plugin_name,
