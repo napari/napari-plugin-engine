@@ -121,14 +121,34 @@ class Plugin:
         return str(version) if version else ''
 
     @overload
-    def get_metadata(self, arg: str, *args: None) -> str:
+    def get_metadata(self, arg: str, *args: None) -> Optional[str]:
         ...
 
     @overload
-    def get_metadata(self, arg: str, *args: str) -> Dict[str, str]:  # noqa
+    def get_metadata(  # noqa
+        self, arg: str, *args: str
+    ) -> Dict[str, Optional[str]]:
         ...
 
-    def get_metadata(self, arg, *args):  # noqa: F811
+    def get_metadata(self, *args):  # noqa: F811
+        """Get metadata for this plugin.
+
+        Valid arguments are any keys from the Core metadata specifications:
+        https://packaging.python.org/specifications/core-metadata/
+
+        Parameters
+        ----------
+        *args : str
+            (Case insensitive) names of metadata entries to retrieve.
+
+        Returns
+        -------
+        str or dict, optional
+            If a single argument is provided, the value for that entry is
+            returned (which may be ``None``).
+            If multiple arguments are provided, a dict of {arg: value} is
+            returned.
+        """
         dist = self.dist
         dct = {}
         if dist:
@@ -142,8 +162,8 @@ class Plugin:
         return dct
 
     @property
-    def standard_meta(self) -> Dict[str, str]:
-        meta = dict(plugin_name=self.name)
+    def standard_meta(self) -> Dict[str, Optional[str]]:
+        meta: Dict[str, Optional[str]] = {'plugin_name': self.name}
         meta['package'] = self.get_metadata('name')
         meta.update(
             self.get_metadata('version', 'summary', 'author', 'license')
@@ -154,4 +174,6 @@ class Plugin:
         meta['url'] = self.get_metadata('Home-page') or self.get_metadata(
             'Download-Url'
         )
+        if meta['url'] == 'UNKNOWN':
+            meta['url'] = None
         return meta
