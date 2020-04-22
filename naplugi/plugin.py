@@ -1,13 +1,11 @@
 import inspect
 import sys
 from functools import lru_cache, cached_property
-from types import ModuleType
-from typing import Dict, List, Optional, Type, Union
+from typing import Dict, List, Optional, Union, Any, NamedTuple
 
 from .hooks import HookCaller
 from .implementation import HookImpl
 
-ClassOrModule = Union[ModuleType, Type]
 
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
@@ -26,11 +24,23 @@ def module_to_dist() -> Dict[str, importlib_metadata.Distribution]:
     return mapping
 
 
+def dict2namespace(dct: dict, name: str = 'Namespace') -> NamedTuple:
+    from collections import namedtuple
+
+    if not isinstance(dct, dict):
+        raise TypeError(f"Not a dictionary: {dct}")
+    bad_keys = [str(k) for k in dct.keys() if not str(k).isidentifier()]
+    if bad_keys:
+        raise ValueError(
+            f"dict contained invalid identifiers: {', '.join(bad_keys)}"
+        )
+    namespace = namedtuple(name, dct.keys())
+    return namespace(**dct)
+
+
 class Plugin:
-    def __init__(
-        self, class_or_module: ClassOrModule, name: Optional[str] = None
-    ):
-        self.object = class_or_module
+    def __init__(self, namespace: Any, name: Optional[str] = None):
+        self.object = namespace
         self._name = name
         self._hookcallers: List[HookCaller] = []
 
@@ -53,20 +63,24 @@ class Plugin:
         return self._name or self.get_canonical_name(self.object)
 
     @classmethod
-    def get_canonical_name(cls, plugin: ClassOrModule):
+    def get_canonical_name(cls, namespace: Any):
         """ Return canonical name for a plugin object.
         Note that a plugin may be registered under a different name which was
         specified by the caller of :meth:`PluginManager.register(plugin, name)
         <.PluginManager.register>`. To obtain the name of a registered plugin
         use :meth:`get_name(plugin) <.PluginManager.get_name>` instead."""
-        return getattr(plugin, "__name__", None) or str(id(plugin))
+        return getattr(namespace, "__name__", None) or str(id(namespace))
 
     def iter_implementations(self, project_name):
         # register matching hook implementations of the plugin
-        for name in dir(self.object):
+        namespace = self.object
+        if isinstance(namespace, dict):
+            namespace = dict2namespace(namespace)
+
+        for name in dir(namespace):
             # check all attributes/methods of plugin and look for functions or
             # methods that have a "{self.project_name}_impl" attribute.
-            method = getattr(self.object, name)
+            method = getattr(namespace, name)
             if not inspect.isroutine(method):
                 continue
             # TODO, make "_impl" a HookImpl class attribute

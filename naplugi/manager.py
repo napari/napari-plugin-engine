@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from logging import getLogger
 from types import ModuleType
 from typing import (
+    Any,
     Callable,
     Dict,
     Generator,
@@ -82,7 +83,7 @@ class PluginManager:
         self.project_name = project_name
         # mapping of name -> module
 
-        self._plugins: Dict[str, Plugin] = {}
+        self.plugins: Dict[str, Plugin] = {}
         self._blocked: Set[str] = set()
 
         self.trace = _tracing.TagTracer().get("pluginmanage")
@@ -159,7 +160,7 @@ class PluginManager:
             errs += err
             if count:
                 msg = f'loaded {count} plugins:\n  '
-                msg += "\n  ".join([str(p) for p in self._plugins.values()])
+                msg += "\n  ".join([str(p) for p in self.plugins.values()])
                 logger.info(msg)
 
         return count, errs
@@ -186,7 +187,7 @@ class PluginManager:
                     ep.group != group  # type: ignore
                     or (name and ep.name != name)
                     # already registered
-                    or self.name_is_registered(ep.name)
+                    or self.is_registered(ep.name)
                     or self.is_blocked(ep.name)
                 ):
                     continue
@@ -215,7 +216,7 @@ class PluginManager:
                 continue
             dist = module_to_dist().get(mod_name)
             name = dist.metadata.get("name") if dist else mod_name
-            if self.name_is_registered(name) or self.is_blocked(name):
+            if self.is_registered(name) or self.is_blocked(name):
                 continue
 
             try:
@@ -241,7 +242,7 @@ class PluginManager:
             else:
                 mod_name = mod
                 module = importlib.import_module(mod)
-            if self.module_is_registered(module):
+            if self.is_registered(module):
                 return 0
         except Exception as exc:
             raise PluginImportError(
@@ -265,13 +266,13 @@ class PluginManager:
                 plugin_name=plugin_name, manager=self, cause=exc,
             )
 
-    def register(self, class_or_module: ClassOrModule, name=None):
+    def register(self, namespace: Any, name=None):
         """Register a plugin and return its canonical name or ``None``.
 
         Parameters
         ----------
-        plugin : ClassOrModule
-            The module to register
+        plugin : Any
+            The namespace (class, module, dict, etc...) to register
         name : str, optional
             Optional name for plugin, by default ``get_canonical_name(plugin)``
 
@@ -286,20 +287,18 @@ class PluginManager:
         ValueError
             if the plugin is already registered.
         """
-        plugin_name = name or Plugin.get_canonical_name(class_or_module)
+        plugin_name = name or Plugin.get_canonical_name(namespace)
 
         if self.is_blocked(plugin_name):
             return
 
-        if self.name_is_registered(plugin_name):
+        if self.is_registered(plugin_name):
             raise ValueError(f"Plugin name already registered: {plugin_name}")
-        if self.module_is_registered(class_or_module):
-            raise ValueError(
-                f"Plugin module already registered: {class_or_module}"
-            )
+        if self.is_registered(namespace):
+            raise ValueError(f"Plugin module already registered: {namespace}")
 
-        _plugin = Plugin(class_or_module, plugin_name)
-        self._plugins[plugin_name] = _plugin
+        _plugin = Plugin(namespace, plugin_name)
+        self.plugins[plugin_name] = _plugin
         for hookimpl in _plugin.iter_implementations(self.project_name):
             name = hookimpl.specname
             hook_caller = getattr(self.hook, name, None)
@@ -335,14 +334,14 @@ class PluginManager:
             if not plugin:
                 warnings.warn(f'No plugins registered for module {module}')
                 return
-            plugin = self._plugins.pop(plugin.name)
+            plugin = self.plugins.pop(plugin.name)
         elif plugin_name:
-            if plugin_name not in self._plugins:
+            if plugin_name not in self.plugins:
                 warnings.warn(
                     f'No plugins registered under the name {plugin_name}'
                 )
                 return
-            plugin = self._plugins.pop(plugin_name)
+            plugin = self.plugins.pop(plugin_name)
         else:
             raise ValueError("One of plugin_name or module must be provided")
 
@@ -355,7 +354,7 @@ class PluginManager:
         """ block registrations of the given name, unregister if already registered. """
         if blocked:
             self._blocked.add(plugin_name)
-            if self.name_is_registered(plugin_name):
+            if self.is_registered(plugin_name):
                 self.unregister(plugin_name=plugin_name)
         else:
             if plugin_name in self._blocked:
@@ -365,7 +364,7 @@ class PluginManager:
         """ return ``True`` if the given plugin name is blocked. """
         return plugin_name in self._blocked
 
-    def add_hookspecs(self, module_or_class: ClassOrModule):
+    def add_hookspecs(self, module_or_class: Any):
         """ add new hook specifications defined in the given ``module_or_class``.
         Functions are recognized if they have been decorated accordingly. """
         names = []
@@ -399,22 +398,18 @@ class PluginManager:
                 % (self.project_name, module_or_class,)
             )
 
-    def module_is_registered(self, module) -> bool:
-        return any(p.object == module for p in self._plugins.values())
+    def _object_is_registered(self, obj: Any) -> bool:
+        return any(p.object == obj for p in self.plugins.values())
 
-    def name_is_registered(self, plugin_name: str) -> bool:
+    def is_registered(self, obj: Any) -> bool:
         """ Return ``True`` if the plugin is already registered. """
-        return plugin_name in self._plugins
+        if isinstance(obj, str):
+            return obj in self.plugins
+        return self._object_is_registered(obj)
 
-    def get_plugin(self, name: str) -> Plugin:
-        """ Return a plugin or ``None`` for the given name. """
-        return self._plugins.get(name)
-
-    def get_plugin_for_module(self, module: ClassOrModule) -> Plugin:
+    def get_plugin_for_module(self, module: Any) -> Plugin:
         try:
-            return next(
-                p for p in self._plugins.values() if p.object == module
-            )
+            return next(p for p in self.plugins.values() if p.object == module)
         except StopIteration:
             return None
 
@@ -472,11 +467,6 @@ class PluginManager:
                                 plugin_name=hookimpl.plugin_name,
                                 manager=self,
                             )
-
-    def getHookCallers(self, plugin_name):
-        """ get all hook callers for the specified plugin. """
-        plugin = self._plugins.get(plugin_name)
-        return plugin._hookcallers if plugin else None
 
     def add_hookcall_monitoring(
         self,

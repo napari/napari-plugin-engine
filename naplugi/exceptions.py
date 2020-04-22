@@ -34,7 +34,7 @@ class PluginError(Exception):
     @property
     def plugin(self) -> Optional['Plugin']:
         if self.manager:
-            return self.manager.get_plugin(self.plugin_name)
+            return self.manager.plugins.get(self.plugin_name)
 
     @classmethod
     def get(

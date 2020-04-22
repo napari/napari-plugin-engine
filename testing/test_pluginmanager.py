@@ -39,24 +39,24 @@ def test_pm(pm):
 
     a1, a2 = A(), A()
     pm.register(a1)
-    assert pm.module_is_registered(a1)
+    assert pm.is_registered(a1)
     pm.register(a2, "hello")
-    assert pm.module_is_registered(a2)
+    assert pm.is_registered(a2)
     assert pm.get_plugin_for_module(a1)
     assert pm.get_plugin_for_module(a2)
-    assert pm.get_plugin("hello").object == a2
+    assert pm.plugins.get("hello").object == a2
     assert pm.unregister(module=a1).object == a1
-    assert not pm.module_is_registered(a1)
+    assert not pm.is_registered(a1)
 
 
-def test_name_is_registered(pm):
+def test_is_registered(pm):
     class A:
         pass
 
     a1 = A()
     pm.register(a1, "hello")
-    assert pm.module_is_registered(a1)
-    assert pm.name_is_registered("hello")
+    assert pm.is_registered(a1)
+    assert pm.is_registered("hello")
 
 
 def test_register_dynamic_attr(he_pm):
@@ -68,7 +68,8 @@ def test_register_dynamic_attr(he_pm):
 
     a = A()
     pname = he_pm.register(a)
-    assert not he_pm.getHookCallers(pname)
+    assert he_pm.plugins.get(pname)
+    assert not he_pm.plugins.get(pname)._hookcallers
 
 
 def test_pm_name(pm):
@@ -80,14 +81,14 @@ def test_pm_name(pm):
     assert name == "hello"
     pm.unregister(module=a1)
     assert pm.get_plugin_for_module(a1) is None
-    assert not pm.module_is_registered(a1)
-    assert not pm._plugins
+    assert not pm.is_registered(a1)
+    assert not pm.plugins
     name2 = pm.register(a1, name="hello")
     assert name2 == name
     pm.unregister(plugin_name="hello")
     assert pm.get_plugin_for_module(a1) is None
-    assert not pm.module_is_registered(a1)
-    assert not pm._plugins
+    assert not pm.is_registered(a1)
+    assert not pm.plugins
 
 
 def test_set_blocked(pm):
@@ -96,11 +97,11 @@ def test_set_blocked(pm):
 
     a1 = A()
     name = pm.register(a1)
-    assert pm.module_is_registered(a1)
+    assert pm.is_registered(a1)
     assert not pm.is_blocked(name)
     pm.set_blocked(name)
     assert pm.is_blocked(name)
-    assert not pm.module_is_registered(a1)
+    assert not pm.is_registered(a1)
 
     pm.set_blocked("somename")
     assert pm.is_blocked("somename")
@@ -146,12 +147,12 @@ def test_register(pm):
     assert pm.get_plugin_for_module(my)
     my2 = MyPlugin()
     my2name = pm.register(my2)
-    assert set([myname, my2name]).issubset(set(pm._plugins))
+    assert set([myname, my2name]).issubset(set(pm.plugins))
 
-    assert pm.module_is_registered(my)
-    assert pm.module_is_registered(my2)
+    assert pm.is_registered(my)
+    assert pm.is_registered(my2)
     pm.unregister(module=my)
-    assert not pm.module_is_registered(my)
+    assert not pm.is_registered(my)
     assert not pm.get_plugin_for_module(my)
 
 
@@ -171,7 +172,7 @@ def test_register_unknown_hooks(pm):
     pm.add_hookspecs(Hooks)
     # assert not pm._unverified_hooks
     assert pm.hook.he_method1(arg=1) == [2]
-    assert len(pm.getHookCallers(pname)) == 1
+    assert len(pm.plugins.get(pname)._hookcallers) == 1
 
 
 def test_register_historic(pm):
@@ -444,7 +445,7 @@ def test_load_setuptools_instantiation(monkeypatch, pm):
     monkeypatch.setattr(importlib_metadata, "distributions", my_distributions)
     num, errors = pm.load_entrypoints("hello", ignore_errors=False)
     assert num == 1
-    plugin = pm.get_plugin("myname")
+    plugin = pm.plugins.get("myname")
     # TODO: do we want to support this?
     assert plugin.object.x == 42
 
