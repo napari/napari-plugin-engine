@@ -83,11 +83,11 @@ class PluginManager:
         # mapping of name -> module
 
         self._plugins: Dict[str, Plugin] = {}
+        self._blocked: Set[str] = set()
 
         self.trace = _tracing.TagTracer().get("pluginmanage")
         self.hook = _HookRelay(self)
-        self.hook._needs_discovery = True
-        self._blocked: Set[str] = set()
+
         # discover external plugins
         self.discover_entrypoint = discover_entrypoint
         self.discover_prefix = discover_prefix
@@ -211,22 +211,23 @@ class PluginManager:
         count = 0
         errors: List[PluginError] = []
         for finder, mod_name, ispkg in pkgutil.iter_modules():
-            if mod_name.startswith(prefix):
-                dist = module_to_dist().get(mod_name)
-                name = dist.metadata.get("name") if dist else mod_name
-                if self.name_is_registered(name) or self.is_blocked(name):
+            if not mod_name.startswith(prefix):
+                continue
+            dist = module_to_dist().get(mod_name)
+            name = dist.metadata.get("name") if dist else mod_name
+            if self.name_is_registered(name) or self.is_blocked(name):
+                continue
+
+            try:
+                self._load_and_register(mod_name, name)
+            except PluginError as e:
+                errors.append(e)
+                self.set_blocked(name)
+                if ignore_errors:
                     continue
+                raise e
 
-                try:
-                    self._load_and_register(mod_name, name)
-                except PluginError as e:
-                    errors.append(e)
-                    self.set_blocked(name)
-                    if ignore_errors:
-                        continue
-                    raise e
-
-                count += 1
+            count += 1
 
         return count, errors
 
@@ -319,7 +320,7 @@ class PluginManager:
         return plugin_name
 
     def unregister(
-        self, plugin_name: str = '', module: Optional[ClassOrModule] = None,
+        self, *, plugin_name: str = '', module: Optional[ClassOrModule] = None,
     ) -> Plugin:
         """ unregister a plugin object and all its contained hook implementations
         from internal data structures. """
@@ -355,7 +356,7 @@ class PluginManager:
         if blocked:
             self._blocked.add(plugin_name)
             if self.name_is_registered(plugin_name):
-                self.unregister(plugin_name)
+                self.unregister(plugin_name=plugin_name)
         else:
             if plugin_name in self._blocked:
                 self._blocked.remove(plugin_name)
@@ -398,18 +399,18 @@ class PluginManager:
                 % (self.project_name, module_or_class,)
             )
 
-    def module_is_registered(self, module):
+    def module_is_registered(self, module) -> bool:
         return any(p.object == module for p in self._plugins.values())
 
-    def name_is_registered(self, plugin_name: str):
+    def name_is_registered(self, plugin_name: str) -> bool:
         """ Return ``True`` if the plugin is already registered. """
         return plugin_name in self._plugins
 
-    def get_plugin(self, name: str):
+    def get_plugin(self, name: str) -> Plugin:
         """ Return a plugin or ``None`` for the given name. """
         return self._plugins.get(name)
 
-    def get_plugin_for_module(self, module: ClassOrModule):
+    def get_plugin_for_module(self, module: ClassOrModule) -> Plugin:
         try:
             return next(
                 p for p in self._plugins.values() if p.object == module
@@ -550,7 +551,7 @@ class _HookRelay:
 
     def __init__(self, manager: PluginManager):
         self._manager = manager
-        self._needs_discovery = False
+        self._needs_discovery = True
 
     def __getattribute__(self, name):
         """Trigger manager plugin discovery when accessing hook first time."""

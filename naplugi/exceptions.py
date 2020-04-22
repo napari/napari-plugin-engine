@@ -6,6 +6,7 @@ ClassOrModule = Union[ModuleType, Type]
 
 if TYPE_CHECKING:
     from .manager import PluginManager  # noqa: F401
+    from .plugin import Plugin  # noqa: F401
 
 
 class PluginError(Exception):
@@ -31,7 +32,7 @@ class PluginError(Exception):
         PluginError._record.append(self)
 
     @property
-    def plugin(self) -> Optional[ClassOrModule]:
+    def plugin(self) -> Optional['Plugin']:
         if self.manager:
             return self.manager.get_plugin(self.plugin_name)
 
@@ -46,7 +47,10 @@ class PluginError(Exception):
         for error in cls._record:
             if manager is not Ellipsis and error.manager != manager:
                 continue
-            if plugin_name is not Ellipsis and error.plugin_name != error:
+            if (
+                plugin_name is not Ellipsis
+                and error.plugin_name != plugin_name
+            ):
                 continue
             if error_type is not Ellipsis:
                 import inspect
@@ -109,19 +113,17 @@ class PluginValidationError(PluginError):
 class PluginCallError(PluginError):
     """Raised when an error is raised when calling a plugin implementation."""
 
-    def __init__(self, hook_implementation, msg=None, cause=None):
+    def __init__(
+        self, hook_implementation, msg=None, cause=None, manager=None
+    ):
         plugin_name = hook_implementation.plugin_name
-        specname = getattr(
-            hook_implementation,
-            'specname',
-            hook_implementation.function.__name__,
-        )
+        specname = hook_implementation.specname
 
         if not msg:
             msg = f"Error in plugin '{plugin_name}', hook '{specname}'"
             if cause:
                 msg += f": {str(cause)}"
 
-        super().__init__(msg)
-        if cause:
-            self.__cause__ = cause
+        super().__init__(
+            msg, plugin_name=plugin_name, cause=cause, manager=manager
+        )
