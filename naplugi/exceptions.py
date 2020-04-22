@@ -1,9 +1,13 @@
-from typing import Optional, Union, Type, TYPE_CHECKING, List, Literal
+from types import TracebackType
+from typing import Optional, Union, Type, TYPE_CHECKING, List, Literal, Tuple
 import logging
 
 if TYPE_CHECKING:
     from .manager import PluginManager  # noqa: F401
     from .plugin import Plugin  # noqa: F401
+
+
+ExcInfoTuple = Tuple[Type[Exception], Exception, Optional[TracebackType]]
 
 
 class PluginError(Exception):
@@ -121,6 +125,10 @@ class PluginError(Exception):
                 )
         msg += '\n'
         logger.log(level, msg)
+
+    def info(self) -> ExcInfoTuple:
+        """Return info as would be returned from sys.exc_info()."""
+        return (self.__class__, self, self.__traceback__)
 
 
 class PluginImportError(PluginError, ImportError):
