@@ -1,5 +1,6 @@
 from typing import Optional, Union, Type, TYPE_CHECKING, List
 from types import ModuleType
+import logging
 
 ClassOrModule = Union[ModuleType, Type]
 
@@ -61,6 +62,26 @@ class PluginError(Exception):
                     continue
             errors.append(error)
         return errors
+
+    def log(self, package_info=True, logger=None, level=logging.ERROR):
+        if not isinstance(logger, logging.Logger):
+            logger = logging.getLogger(logger)
+
+        msg = f'PluginError: {self}\n'
+        if self.__cause__:
+            cause = str(self.__cause__).replace("\n", "\n" + " " * 13)
+            msg += f'  Cause was: {cause}'
+
+        if package_info and self.plugin:
+            meta = self.plugin.standard_meta
+            meta.pop('license', None)
+            meta.pop('summary', None)
+            if meta:
+                msg += "\n" + "\n".join(
+                    [f'{k: >11}: {v}' for k, v in meta.items() if v]
+                )
+        msg += '\n'
+        logger.log(level, msg)
 
 
 class PluginImportError(PluginError, ImportError):

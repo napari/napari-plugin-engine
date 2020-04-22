@@ -1,6 +1,6 @@
 import inspect
 import sys
-from functools import lru_cache
+from functools import lru_cache, cached_property
 from types import ModuleType
 from typing import Dict, List, Optional, Type, Union
 
@@ -78,11 +78,51 @@ class Plugin:
             yield HookImpl(method, self, **hookimpl_opts)
 
     @property
-    def dist(self) -> Optional[importlib_metadata.Distribution]:
-        top_level = self.object.__module__.split('.')[0]
-        return module_to_dist().get(top_level)
+    def module_name(self):
+        if inspect.ismodule(self.object):
+            return self.object.__name__
+        else:
+            return self.object.__module__
 
-    def get_metadata(self, name: str):
+    @cached_property
+    def dist(self) -> Optional[importlib_metadata.Distribution]:
+        return module_to_dist().get(self.module_name.split('.', 1)[0])
+
+    @property
+    def version(self) -> str:
+        version = self.dist.metadata.get('version')
+        if not version and inspect.ismodule(self.object):
+            version = getattr(self.object, '__version__')
+        if not version:
+            top_module = self.module_name.split('.', 1)[0]
+            if top_module in sys.modules:
+                version = getattr(sys.modules[top_module], '__version__')
+        return str(version) if version else ''
+
+    def get_metadata(self, *args: List[str]) -> Union[str, Dict[str, str]]:
         dist = self.dist
+        dct = {}
         if dist:
-            return self.dist.metadata.get(name)
+            for a in args:
+                if a == 'version':
+                    dct[a] = self.version
+                else:
+                    dct[a] = self.dist.metadata.get(a)
+        if dct and len(args) == 1:
+            return dct[args[0]]
+        return dct
+
+    @property
+    def standard_meta(self) -> dict:
+        meta = dict(plugin_name=self.name)
+        meta['package'] = self.get_metadata('name')
+        meta.update(
+            self.get_metadata('version', 'summary', 'author', 'license',)
+        )
+        meta['email'] = self.get_metadata('Author-Email') or self.get_metadata(
+            'Maintainer-Email'
+        )
+        meta['url'] = self.get_metadata('Home-page') or self.get_metadata(
+            'Download-Url'
+        )
+        return meta
