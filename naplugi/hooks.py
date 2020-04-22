@@ -2,6 +2,7 @@
 Internal hook annotation, representation and calling machinery.
 """
 import warnings
+from collections.abc import Sequence
 from typing import Any, Callable, List, Optional, Union
 
 from .callers import HookCallError, HookResult, _multicall
@@ -222,6 +223,13 @@ class HookCaller:
         plugin_2
         plugin_1
         """
+
+        if not isinstance(new_order, Sequence) or isinstance(new_order, str):
+            raise TypeError(
+                'The first argument to "bring_to_front" '
+                'must be a non-string sequence type.'
+            )
+
         # make sure items in order are unique
         if len(new_order) != len(set(new_order)):
             raise ValueError("repeated item in order")
@@ -364,6 +372,10 @@ class HookCaller:
         PluginCallError
             If ``firstresult == True`` and a plugin raises an Exception.
         """
+        # if not self.get_hookimpls():
+        #     warnings.warn(
+        #         'No hook implementations registered for this hook caller!'
+        #     )
         self._check_call_kwargs(kwargs)
         impls = [imp for imp in self.get_hookimpls() if imp not in _skip_impls]
         return self._hookexec(self, impls, kwargs)
