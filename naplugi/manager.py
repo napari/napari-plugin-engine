@@ -715,14 +715,14 @@ class _HookRelay:
         self._manager = manager
         self._needs_discovery = True
 
-    def __getattribute__(self, name):
+    def __getattribute__(self, name) -> HookCaller:
         """Trigger manager plugin discovery when accessing hook first time."""
         if name not in ("_needs_discovery", "_manager",):
             if self._needs_discovery:
                 self._manager.discover()
         return object.__getattribute__(self, name)
 
-    def items(self):
+    def items(self) -> List[Tuple[str, HookCaller]]:
         """Iterate through hookcallers, removing private attributes."""
         return [
             (k, val) for k, val in vars(self).items() if not k.startswith("_")
