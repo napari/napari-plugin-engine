@@ -30,6 +30,7 @@ from .exceptions import (
 )
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImpl
+from .markers import HookimplMarker
 from .plugin import Plugin, module_to_dist
 
 if sys.version_info >= (3, 8):
@@ -39,6 +40,17 @@ else:
 
 
 logger = getLogger(__name__)
+
+
+def ensure_namespace(obj: Any, name: str = 'Namespace') -> Type:
+    if isinstance(obj, dict):
+        bad_keys = [str(k) for k in obj.keys() if not str(k).isidentifier()]
+        if bad_keys:
+            raise ValueError(
+                f"dict contained invalid identifiers: {', '.join(bad_keys)}"
+            )
+        return type(name, (), obj)
+    return obj
 
 
 @contextmanager
@@ -381,6 +393,18 @@ class PluginManager:
                 plugin_name=plugin_name, manager=self, cause=exc,
             )
 
+    def _register_dict(
+        self, dct: Dict[str, Callable], name: Optional[str] = None
+    ) -> Optional[str]:
+        mark = HookimplMarker(self.project_name)
+        clean_dct = {
+            key: mark(specname=key)(val)
+            for key, val in dct.items()
+            if inspect.isfunction(val)
+        }
+        namespace = ensure_namespace(clean_dct)
+        return self.register(namespace, name)
+
     def register(
         self, namespace: Any, name: Optional[str] = None
     ) -> Optional[str]:
@@ -404,6 +428,9 @@ class PluginManager:
         ValueError
             if the plugin is already registered.
         """
+        if isinstance(namespace, dict):
+            return self._register_dict(namespace, name)
+
         plugin_name = name or Plugin.get_canonical_name(namespace)
 
         if self.is_blocked(plugin_name):

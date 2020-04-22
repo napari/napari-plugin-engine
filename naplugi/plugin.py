@@ -6,9 +6,9 @@ from typing import (
     Dict,
     Generator,
     List,
-    NamedTuple,
     Optional,
     overload,
+    Type,
 )
 
 from .hooks import HookCaller
@@ -29,20 +29,6 @@ def module_to_dist() -> Dict[str, importlib_metadata.Distribution]:
             for mod in filter(None, modules.split('\n')):
                 mapping[mod] = dist
     return mapping
-
-
-def dict2namespace(dct: dict, name: str = 'Namespace') -> NamedTuple:
-    from collections import namedtuple
-
-    if not isinstance(dct, dict):
-        raise TypeError(f"Not a dictionary: {dct}")
-    bad_keys = [str(k) for k in dct.keys() if not str(k).isidentifier()]
-    if bad_keys:
-        raise ValueError(
-            f"dict contained invalid identifiers: {', '.join(bad_keys)}"
-        )
-    namespace = namedtuple(name, dct.keys())
-    return namespace(**dct)
 
 
 class Plugin:
@@ -79,9 +65,6 @@ class Plugin:
     ) -> Generator[HookImpl, None, None]:
         # register matching hook implementations of the plugin
         namespace = self.object
-        if isinstance(namespace, dict):
-            namespace = dict2namespace(namespace)
-
         for name in dir(namespace):
             # check all attributes/methods of plugin and look for functions or
             # methods that have a "{self.project_name}_impl" attribute.
