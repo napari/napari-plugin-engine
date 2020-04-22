@@ -1,11 +1,18 @@
 import inspect
 import sys
-from functools import lru_cache, cached_property
-from typing import Dict, List, Optional, Union, Any, NamedTuple
+from functools import cached_property, lru_cache
+from typing import (
+    Any,
+    Dict,
+    Generator,
+    List,
+    NamedTuple,
+    Optional,
+    overload,
+)
 
 from .hooks import HookCaller
 from .implementation import HookImpl
-
 
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
@@ -44,26 +51,22 @@ class Plugin:
         self._name = name
         self._hookcallers: List[HookCaller] = []
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f'<Plugin "{self.name}" from '
             f'"{self.object}" with {self.nhooks} hooks>'
         )
 
     @property
-    def file(self):
-        return self.object.__file__
-
-    @property
-    def nhooks(self):
+    def nhooks(self) -> int:
         return len(self._hookcallers)
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name or self.get_canonical_name(self.object)
 
     @classmethod
-    def get_canonical_name(cls, namespace: Any):
+    def get_canonical_name(cls, namespace: Any) -> str:
         """ Return canonical name for a plugin object.
         Note that a plugin may be registered under a different name which was
         specified by the caller of :meth:`PluginManager.register(plugin, name)
@@ -71,7 +74,9 @@ class Plugin:
         use :meth:`get_name(plugin) <.PluginManager.get_name>` instead."""
         return getattr(namespace, "__name__", None) or str(id(namespace))
 
-    def iter_implementations(self, project_name):
+    def iter_implementations(
+        self, project_name: str
+    ) -> Generator[HookImpl, None, None]:
         # register matching hook implementations of the plugin
         namespace = self.object
         if isinstance(namespace, dict):
@@ -104,7 +109,9 @@ class Plugin:
 
     @property
     def version(self) -> str:
-        version = self.dist.metadata.get('version')
+        version = ''
+        if self.dist:
+            version = self.dist.metadata.get('version')
         if not version and inspect.ismodule(self.object):
             version = getattr(self.object, '__version__')
         if not version:
@@ -113,7 +120,15 @@ class Plugin:
                 version = getattr(sys.modules[top_module], '__version__')
         return str(version) if version else ''
 
-    def get_metadata(self, *args: List[str]) -> Union[str, Dict[str, str]]:
+    @overload
+    def get_metadata(self, arg: str, *args: None) -> str:
+        ...
+
+    @overload
+    def get_metadata(self, arg: str, *args: str) -> Dict[str, str]:  # noqa
+        ...
+
+    def get_metadata(self, arg, *args):  # noqa: F811
         dist = self.dist
         dct = {}
         if dist:
@@ -121,17 +136,17 @@ class Plugin:
                 if a == 'version':
                     dct[a] = self.version
                 else:
-                    dct[a] = self.dist.metadata.get(a)
+                    dct[a] = dist.metadata.get(a)
         if dct and len(args) == 1:
             return dct[args[0]]
         return dct
 
     @property
-    def standard_meta(self) -> dict:
+    def standard_meta(self) -> Dict[str, str]:
         meta = dict(plugin_name=self.name)
         meta['package'] = self.get_metadata('name')
         meta.update(
-            self.get_metadata('version', 'summary', 'author', 'license',)
+            self.get_metadata('version', 'summary', 'author', 'license')
         )
         meta['email'] = self.get_metadata('Author-Email') or self.get_metadata(
             'Maintainer-Email'

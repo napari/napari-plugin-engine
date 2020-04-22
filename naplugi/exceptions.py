@@ -1,4 +1,4 @@
-from typing import Optional, Union, Type, TYPE_CHECKING, List
+from typing import Optional, Union, Type, TYPE_CHECKING, List, Literal
 from types import ModuleType
 import logging
 
@@ -16,7 +16,7 @@ class PluginError(Exception):
         self,
         message: str = '',
         *,
-        plugin_name: str = '',
+        plugin_name: Optional[str] = None,
         manager: Optional['PluginManager'] = None,
         cause: Optional[BaseException] = None,
     ):
@@ -33,26 +33,48 @@ class PluginError(Exception):
 
     @property
     def plugin(self) -> Optional['Plugin']:
-        if self.manager:
+        if self.manager and self.plugin_name:
             return self.manager.plugins.get(self.plugin_name)
+        return None
 
     @classmethod
     def get(
         cls,
-        manager: Optional['PluginManager'] = Ellipsis,
-        plugin_name: str = Ellipsis,
-        error_type: Type[BaseException] = Ellipsis,
+        manager: Union['PluginManager', None, Literal['_NULL']] = '_NULL',
+        plugin_name: Optional[str] = '_NULL',
+        error_type: Union[Type[BaseException], Literal['_NULL']] = '_NULL',
     ) -> List['PluginError']:
+        """Return errors that have been logged, filtered by parameters.
+
+        Parameters
+        ----------
+        manager : PluginManager, optional
+            If provided, will restrict errors to those that are owned by
+            ``manager``.
+        plugin_name : str
+            If provided, will restrict errors to those that were raised by
+            ``plugin_name``.
+        error_type : Exception
+            If provided, will restrict errors to instances of ``error_type``.
+
+        Returns
+        -------
+        list of PluginError
+            A list of PluginErrors that have been instantiated during this
+            session that match the provided parameters.
+
+        Raises
+        ------
+        TypeError
+            If ``error_type`` is provided and is not an exception class.
+        """
         errors: List['PluginError'] = []
         for error in cls._record:
-            if manager is not Ellipsis and error.manager != manager:
+            if manager != '_NULL' and error.manager != manager:
                 continue
-            if (
-                plugin_name is not Ellipsis
-                and error.plugin_name != plugin_name
-            ):
+            if plugin_name != '_NULL' and error.plugin_name != plugin_name:
                 continue
-            if error_type is not Ellipsis:
+            if error_type != '_NULL':
                 import inspect
 
                 if not (
@@ -67,7 +89,23 @@ class PluginError(Exception):
             errors.append(error)
         return errors
 
-    def log(self, package_info=True, logger=None, level=logging.ERROR):
+    def log(
+        self,
+        package_info: bool = True,
+        logger: Union[logging.Logger, None, str] = None,
+        level: int = logging.ERROR,
+    ):
+        """Log this error with metadata, optionally provide logger and level.
+
+        Parameters
+        ----------
+        package_info : bool, optional
+            If true, will include package metadata in log, by default True
+        logger : logging.Logger or str, optional
+            A Logger instance or name of a logger to use, by default None
+        level : int, optional
+            The logging level to use, by default logging.ERROR
+        """
         if not isinstance(logger, logging.Logger):
             logger = logging.getLogger(logger)
 

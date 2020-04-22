@@ -17,6 +17,7 @@ from typing import (
     Set,
     Tuple,
     Type,
+    Literal,
     Union,
 )
 
@@ -44,6 +45,18 @@ ClassOrModule = Union[ModuleType, Type]
 
 @contextmanager
 def temp_path_additions(path: Optional[Union[str, List[str]]]) -> Generator:
+    """A context manager that temporarily adds ``path`` to sys.path.
+
+    Parameters
+    ----------
+    path : str or list of str
+        A path or list of paths to add to sys.path
+
+    Yields
+    -------
+    sys_path : list of str
+        The current sys.path for the context.
+    """
     if isinstance(path, str):
         path = [path]
     to_add = [p for p in path if p not in sys.path] if path else []
@@ -110,9 +123,30 @@ class PluginManager:
     def _hookexec(
         self, caller: HookCaller, methods: List[HookImpl], kwargs: dict
     ) -> HookResult:
-        # called from all hookcaller instances.
-        # enable_tracing will set its own wrapping function at
-        # self._inner_hookexec
+        """Returns a function that will call a set of hookipmls with a caller.
+
+        This function will be passed to ``HookCaller`` instances that are
+        created during hookspec and plugin registration.
+
+        If :meth:`~.PluginManager.enable_tracing` is used, it will set it's own
+        wrapper function at self._inner_hookexec to enable tracing of hook
+        calls.
+
+        Parameters
+        ----------
+        caller : HookCaller
+            The HookCaller instance that will call the HookImpls.
+        methods : List[HookImpl]
+            A list of :class:`~naplugi.HookImpl` objects whos functions will
+            be called during the hook call loop.
+        kwargs : dict
+            Keyword arguments to pass when calling the ``HookImpl``.
+
+        Returns
+        -------
+        :class:`~naplugi.HookResult`
+            The result object produced by the multicall loop.
+        """
         return self._inner_hookexec(caller, methods, kwargs)
 
     def discover(
@@ -167,6 +201,8 @@ class PluginManager:
 
     @contextmanager
     def discovery_blocked(self) -> Generator:
+        """A context manager that temporarily blocks discovery of new plugins.
+        """
         current = self.hook._needs_discovery
         self.hook._needs_discovery = False
         try:
@@ -177,6 +213,36 @@ class PluginManager:
     def load_entrypoints(
         self, group: str, name: str = '', ignore_errors=True
     ) -> Tuple[int, List[PluginError]]:
+        """Load plugins from distributions with an entry point named ``group``.
+
+        https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata
+
+        For background on entry points, see the Entry Point specification at
+        https://packaging.python.org/specifications/entry-points/
+
+        Parameters
+        ----------
+        group : str
+            The entry_point group name to search for
+        name : str, optional
+            If provided, loads only plugins named ``name``, by default None.
+        ignore_errors : bool, optional
+            If ``False``, any errors raised during registration will be
+            immediately raised, by default True
+
+        Returns
+        -------
+        Tuple[int, List[PluginError]]
+            A tuple of `(count, errors)` with the number of new modules
+            registered and a list of any errors encountered (assuming
+            ``ignore_errors`` was ``False``, otherwise they are raised.) 
+
+        Raises
+        ------
+        PluginError
+            If ``ignore_errors`` is ``True`` and any errors are raised during
+            registration.
+        """
         if (not group) or os.environ.get("NAPLUGI_DISABLE_ENTRYPOINT_PLUGINS"):
             return 0, []
         count = 0
@@ -193,7 +259,8 @@ class PluginManager:
                     continue
 
                 try:
-                    self._load_and_register(ep, ep.name)
+                    if self._load_and_register(ep, ep.name):
+                        count += 1
                 except PluginError as e:
                     errors.append(e)
                     self.set_blocked(name)
@@ -201,12 +268,37 @@ class PluginManager:
                         continue
                     raise e
 
-                count += 1
         return count, errors
 
     def load_modules_by_prefix(
-        self, prefix: str, ignore_errors=True
+        self, prefix: str, ignore_errors: bool = True
     ) -> Tuple[int, List[PluginError]]:
+        """Load plugins by module naming convention.
+
+        https://packaging.python.org/guides/creating-and-discovering-plugins/#using-naming-convention
+
+        Parameters
+        ----------
+        prefix : str
+            Any modules found in sys.path whose names begin with ``prefix``
+            will be imported and searched for hook implementations.
+        ignore_errors : bool, optional
+            If ``False``, any errors raised during registration will be
+            immediately raised, by default True
+
+        Returns
+        -------
+        Tuple[int, List[PluginError]]
+            A tuple of `(count, errors)` with the number of new modules
+            registered and a list of any errors encountered (assuming
+            ``ignore_errors`` was ``False``, otherwise they are raised.) 
+
+        Raises
+        ------
+        PluginError
+            If ``ignore_errors`` is ``True`` and any errors are raised during
+            registration.
+        """
         if not prefix:
             return 0, []
         count = 0
@@ -220,7 +312,8 @@ class PluginManager:
                 continue
 
             try:
-                self._load_and_register(mod_name, name)
+                if self._load_and_register(mod_name, name):
+                    count += 1
             except PluginError as e:
                 errors.append(e)
                 self.set_blocked(name)
@@ -228,13 +321,37 @@ class PluginManager:
                     continue
                 raise e
 
-            count += 1
-
         return count, errors
 
     def _load_and_register(
-        self, mod: Union[str, importlib_metadata.EntryPoint], plugin_name
-    ):
+        self,
+        mod: Union[str, importlib_metadata.EntryPoint],
+        plugin_name: Optional[str] = None,
+    ) -> Optional[str]:
+        """A helper function to register a module or EntryPoint under a name.
+
+        Parameters
+        ----------
+        mod : str or importlib_metadata.EntryPoint
+            The name of a module or an EntryPoint object instance to load.
+        plugin_name : str, optional
+            Optional name for plugin, by default ``get_canonical_name(plugin)``
+
+        Returns
+        -------
+        str or None
+            canonical plugin name, or ``None`` if the name is blocked from
+            registering.
+
+        Raises
+        ------
+        PluginImportError
+            If an exception is raised when importing the module.
+        PluginValidationError
+            If an entry_point is declared that is neither a module nor a class.
+        PluginRegistrationError
+            If an exception is raised during plugin registration.
+        """
         try:
             if isinstance(mod, importlib_metadata.EntryPoint):
                 mod_name = mod.value
@@ -243,7 +360,7 @@ class PluginManager:
                 mod_name = mod
                 module = importlib.import_module(mod)
             if self.is_registered(module):
-                return 0
+                return None
         except Exception as exc:
             raise PluginImportError(
                 f'Error while importing module {mod_name}',
@@ -260,13 +377,15 @@ class PluginManager:
             )
 
         try:
-            self.register(module, plugin_name)
+            return self.register(module, plugin_name)
         except Exception as exc:
             raise PluginRegistrationError(
                 plugin_name=plugin_name, manager=self, cause=exc,
             )
 
-    def register(self, namespace: Any, name=None):
+    def register(
+        self, namespace: Any, name: Optional[str] = None
+    ) -> Optional[str]:
         """Register a plugin and return its canonical name or ``None``.
 
         Parameters
@@ -290,7 +409,7 @@ class PluginManager:
         plugin_name = name or Plugin.get_canonical_name(namespace)
 
         if self.is_blocked(plugin_name):
-            return
+            return None
 
         if self.is_registered(plugin_name):
             raise ValueError(f"Plugin name already registered: {plugin_name}")
@@ -300,12 +419,11 @@ class PluginManager:
         _plugin = Plugin(namespace, plugin_name)
         self.plugins[plugin_name] = _plugin
         for hookimpl in _plugin.iter_implementations(self.project_name):
-            name = hookimpl.specname
-            hook_caller = getattr(self.hook, name, None)
+            hook_caller = getattr(self.hook, hookimpl.specname, None)
             # if we don't yet have a hookcaller by this name, create one.
             if hook_caller is None:
-                hook_caller = HookCaller(name, self._hookexec)
-                setattr(self.hook, name, hook_caller)
+                hook_caller = HookCaller(hookimpl.specname, self._hookexec)
+                setattr(self.hook, hookimpl.specname, hook_caller)
             # otherwise, if it has a specification, validate the new
             # hookimpl against the specification.
             elif hook_caller.has_spec():
@@ -320,8 +438,8 @@ class PluginManager:
 
     def unregister(
         self, *, plugin_name: str = '', module: Optional[ClassOrModule] = None,
-    ) -> Plugin:
-        """ unregister a plugin object and all its contained hook implementations
+    ) -> Optional[Plugin]:
+        """unregister a plugin object and all its contained hook implementations
         from internal data structures. """
 
         if module is not None:
@@ -333,14 +451,14 @@ class PluginManager:
             plugin = self.get_plugin_for_module(module)
             if not plugin:
                 warnings.warn(f'No plugins registered for module {module}')
-                return
+                return None
             plugin = self.plugins.pop(plugin.name)
         elif plugin_name:
             if plugin_name not in self.plugins:
                 warnings.warn(
                     f'No plugins registered under the name {plugin_name}'
                 )
-                return
+                return None
             plugin = self.plugins.pop(plugin_name)
         else:
             raise ValueError("One of plugin_name or module must be provided")
@@ -349,20 +467,6 @@ class PluginManager:
             hook_caller._remove_plugin(plugin.object)
 
         return plugin
-
-    def set_blocked(self, plugin_name: str, blocked=True):
-        """ block registrations of the given name, unregister if already registered. """
-        if blocked:
-            self._blocked.add(plugin_name)
-            if self.is_registered(plugin_name):
-                self.unregister(plugin_name=plugin_name)
-        else:
-            if plugin_name in self._blocked:
-                self._blocked.remove(plugin_name)
-
-    def is_blocked(self, plugin_name: str) -> bool:
-        """ return ``True`` if the given plugin name is blocked. """
-        return plugin_name in self._blocked
 
     def add_hookspecs(self, module_or_class: Any):
         """ add new hook specifications defined in the given ``module_or_class``.
@@ -407,7 +511,30 @@ class PluginManager:
             return obj in self.plugins
         return self._object_is_registered(obj)
 
-    def get_plugin_for_module(self, module: Any) -> Plugin:
+    def is_blocked(self, plugin_name: str) -> bool:
+        """ return ``True`` if the given plugin name is blocked. """
+        return plugin_name in self._blocked
+
+    def set_blocked(self, plugin_name: str, blocked=True):
+        """Block registrations of ``plugin_name``, unregister if registered.
+
+        Parameters
+        ----------
+        plugin_name : str
+            A plugin name to block.
+        blocked : bool, optional
+            Whether to block the plugin.  If ``False`` will "unblock"
+            ``plugin_name``.  by default True
+        """
+        if blocked:
+            self._blocked.add(plugin_name)
+            if self.is_registered(plugin_name):
+                self.unregister(plugin_name=plugin_name)
+        else:
+            if plugin_name in self._blocked:
+                self._blocked.remove(plugin_name)
+
+    def get_plugin_for_module(self, module: Any) -> Optional[Plugin]:
         try:
             return next(p for p in self.plugins.values() if p.object == module)
         except StopIteration:
@@ -415,10 +542,19 @@ class PluginManager:
 
     def get_errors(
         self,
-        plugin_name: str = Ellipsis,
-        error_type: Type[BaseException] = Ellipsis,
+        plugin_name: Optional[str] = '_NULL',
+        error_type: Union[Type[BaseException], Literal['_NULL']] = '_NULL',
     ) -> List[PluginError]:
-        """Return a list of PluginErrors associated with this manager."""
+        """Return a list of PluginErrors associated with this manager.
+
+        Parameters
+        ----------
+        plugin_name : str
+            If provided, will restrict errors to those that were raised by
+            ``plugin_name``.
+        error_type : Exception
+            If provided, will restrict errors to instances of ``error_type``.
+        """
         return PluginError.get(
             manager=self, plugin_name=plugin_name, error_type=error_type
         )
