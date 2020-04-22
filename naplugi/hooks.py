@@ -2,16 +2,13 @@
 Internal hook annotation, representation and calling machinery.
 """
 import warnings
-from types import ModuleType
-from typing import Any, Callable, List, Optional, Type, Union
+from typing import Any, Callable, List, Optional, Union
 
 from .callers import HookCallError, HookResult, _multicall
 from .exceptions import PluginCallError
 from .implementation import HookImpl, HookSpec
 
-
 HookExecFunc = Callable[['HookCaller', List[HookImpl], dict], HookResult]
-ClassOrModule = Union[ModuleType, Type]
 
 
 class HookCaller:
@@ -19,7 +16,7 @@ class HookCaller:
         self,
         name: str,
         hook_execute: HookExecFunc,
-        specmodule_or_class: Optional[ClassOrModule] = None,
+        namespace: Any = None,
         spec_opts: Optional[dict] = None,
     ):
         self.name = name
@@ -30,16 +27,16 @@ class HookCaller:
         self.kwargnames = None
         self.multicall = _multicall
         self.spec: Optional[HookSpec] = None
-        if specmodule_or_class is not None:
+        if namespace is not None:
             assert spec_opts is not None
-            self.set_specification(specmodule_or_class, spec_opts)
+            self.set_specification(namespace, spec_opts)
 
     def has_spec(self) -> bool:
         return self.spec is not None
 
     @property
     def is_firstresult(self) -> bool:
-        return self.spec.opts.get("firstresult") if self.spec else False
+        return self.spec.opts.get("firstresult", False) if self.spec else False
 
     def set_specification(self, specmodule_or_class, spec_opts):
         assert not self.has_spec()
@@ -50,7 +47,7 @@ class HookCaller:
     def is_historic(self) -> bool:
         return hasattr(self, "_call_history")
 
-    def _remove_plugin(self, plugin: ClassOrModule):
+    def _remove_plugin(self, plugin: Any):
         def remove(wrappers):
             for i, method in enumerate(wrappers):
                 if method.plugin == plugin:

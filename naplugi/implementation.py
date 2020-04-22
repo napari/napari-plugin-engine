@@ -1,12 +1,9 @@
 import inspect
 import sys
-from types import ModuleType
-from typing import Callable, Union, Type, Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .manager import Plugin  # noqa: F401
-
-ClassOrModule = Union[ModuleType, Type]
 
 
 class HookImpl:
@@ -32,15 +29,15 @@ class HookImpl:
         self.enabled = enabled
 
     @property
-    def plugin(self):
+    def plugin(self) -> Any:
         return self._plugin.object if self._plugin else None
 
     @property
-    def plugin_name(self):
-        return self._plugin.name if self._plugin else None
+    def plugin_name(self) -> str:
+        return self._plugin.name if self._plugin else 'orphaned'
 
     @property
-    def opts(self):
+    def opts(self) -> dict:
         # legacy
         return {
             x: getattr(self, x)
@@ -68,7 +65,7 @@ class HookImpl:
 
 
 class HookSpec:
-    def __init__(self, namespace: ClassOrModule, name: str, opts: dict):
+    def __init__(self, namespace: Any, name: str, opts: dict):
         self.namespace = namespace
         self.function = function = getattr(namespace, name)
         self.name = name

@@ -60,14 +60,18 @@ class HookResult:
         firstresult: bool = False,
         plugin_errors: Optional[List[PluginCallError]] = None,
     ):
-        self._result = None if firstresult else []
-        self.implementation = None if firstresult else []
+        self._result: Any = []
+        self.implementation: Any = [None if firstresult else []]
         if result:
             self._result, self.implementation = tuple(zip(*result))
             self._result = list(self._result)
-            if firstresult and self._result:
+        if firstresult:
+            if self._result:
                 self._result = self._result[0]
                 self.implementation = self.implementation[0]
+            else:
+                self._result = None
+                self.implementation = None
 
         self._excinfo = excinfo
         self.is_firstresult = firstresult

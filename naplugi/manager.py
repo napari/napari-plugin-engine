@@ -6,18 +6,17 @@ import sys
 import warnings
 from contextlib import contextmanager
 from logging import getLogger
-from types import ModuleType
 from typing import (
     Any,
     Callable,
     Dict,
     Generator,
     List,
+    Literal,
     Optional,
     Set,
     Tuple,
     Type,
-    Literal,
     Union,
 )
 
@@ -40,7 +39,6 @@ else:
 
 
 logger = getLogger(__name__)
-ClassOrModule = Union[ModuleType, Type]
 
 
 @contextmanager
@@ -235,7 +233,7 @@ class PluginManager:
         Tuple[int, List[PluginError]]
             A tuple of `(count, errors)` with the number of new modules
             registered and a list of any errors encountered (assuming
-            ``ignore_errors`` was ``False``, otherwise they are raised.) 
+            ``ignore_errors`` was ``False``, otherwise they are raised.)
 
         Raises
         ------
@@ -291,7 +289,7 @@ class PluginManager:
         Tuple[int, List[PluginError]]
             A tuple of `(count, errors)` with the number of new modules
             registered and a list of any errors encountered (assuming
-            ``ignore_errors`` was ``False``, otherwise they are raised.) 
+            ``ignore_errors`` was ``False``, otherwise they are raised.)
 
         Raises
         ------
@@ -437,7 +435,7 @@ class PluginManager:
         return plugin_name
 
     def unregister(
-        self, *, plugin_name: str = '', module: Optional[ClassOrModule] = None,
+        self, *, plugin_name: str = '', module: Any = None,
     ) -> Optional[Plugin]:
         """unregister a plugin object and all its contained hook implementations
         from internal data structures. """
@@ -468,19 +466,19 @@ class PluginManager:
 
         return plugin
 
-    def add_hookspecs(self, module_or_class: Any):
-        """ add new hook specifications defined in the given ``module_or_class``.
+    def add_hookspecs(self, namespace: Any):
+        """ add new hook specifications defined in the given ``namespace``.
         Functions are recognized if they have been decorated accordingly. """
         names = []
-        for name in dir(module_or_class):
-            method = getattr(module_or_class, name)
+        for name in dir(namespace):
+            method = getattr(namespace, name)
             # TODO: make `_spec` a class attribute of HookSpec
             spec_opts = getattr(method, self.project_name + "_spec", None)
             if spec_opts is not None:
                 hc = getattr(self.hook, name, None,)
                 if hc is None:
                     hc = HookCaller(
-                        name, self._hookexec, module_or_class, spec_opts,
+                        name, self._hookexec, namespace, spec_opts,
                     )
                     setattr(
                         self.hook, name, hc,
@@ -488,7 +486,7 @@ class PluginManager:
                 else:
                     # plugins registered this hook without knowing the spec
                     hc.set_specification(
-                        module_or_class, spec_opts,
+                        namespace, spec_opts,
                     )
                     for hookfunction in hc.get_hookimpls():
                         self._verify_hook(
@@ -498,8 +496,7 @@ class PluginManager:
 
         if not names:
             raise ValueError(
-                "did not find any %r hooks in %r"
-                % (self.project_name, module_or_class,)
+                f"did not find any {self.project_name!r} hooks in {namespace!r}"
             )
 
     def _object_is_registered(self, obj: Any) -> bool:

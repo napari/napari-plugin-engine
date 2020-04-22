@@ -1,8 +1,5 @@
 from typing import Optional, Union, Type, TYPE_CHECKING, List, Literal
-from types import ModuleType
 import logging
-
-ClassOrModule = Union[ModuleType, Type]
 
 if TYPE_CHECKING:
     from .manager import PluginManager  # noqa: F401
