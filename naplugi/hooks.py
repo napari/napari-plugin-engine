@@ -37,11 +37,11 @@ class HookCaller:
 
     @property
     def is_firstresult(self) -> bool:
-        return self.spec.opts.get("firstresult", False) if self.spec else False
+        return self.spec.firstresult if self.spec else False
 
-    def set_specification(self, specmodule_or_class, spec_opts):
+    def set_specification(self, namespace, spec_opts):
         assert not self.has_spec()
-        self.spec = HookSpec(specmodule_or_class, self.name, spec_opts)
+        self.spec = HookSpec(namespace, self.name, **spec_opts)
         if spec_opts.get("historic"):
             self._call_history = []
 

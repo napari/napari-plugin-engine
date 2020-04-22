@@ -30,7 +30,7 @@ from .exceptions import (
 )
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImpl
-from .markers import HookimplMarker
+from .markers import HookimplMarker, HookspecMarker
 from .plugin import Plugin, module_to_dist
 
 if sys.version_info >= (3, 8):
@@ -394,11 +394,11 @@ class PluginManager:
             )
 
     def _register_dict(
-        self, dct: Dict[str, Callable], name: Optional[str] = None
+        self, dct: Dict[str, Callable], name: Optional[str] = None, **kwargs
     ) -> Optional[str]:
         mark = HookimplMarker(self.project_name)
         clean_dct = {
-            key: mark(specname=key)(val)
+            key: mark(specname=key, **kwargs)(val)
             for key, val in dct.items()
             if inspect.isfunction(val)
         }
@@ -493,31 +493,43 @@ class PluginManager:
 
         return plugin
 
+    def _add_hookspec_dict(self, dct: Dict[str, Callable], **kwargs):
+        mark = HookspecMarker(self.project_name)
+        clean_dct = {
+            key: mark(**kwargs)(val)
+            for key, val in dct.items()
+            if inspect.isfunction(val)
+        }
+        namespace = ensure_namespace(clean_dct)
+        return self.add_hookspecs(namespace)
+
     def add_hookspecs(self, namespace: Any):
         """ add new hook specifications defined in the given ``namespace``.
         Functions are recognized if they have been decorated accordingly. """
         names = []
         for name in dir(namespace):
             method = getattr(namespace, name)
+            if not inspect.isroutine(method):
+                continue
             # TODO: make `_spec` a class attribute of HookSpec
             spec_opts = getattr(method, self.project_name + "_spec", None)
             if spec_opts is not None:
-                hc = getattr(self.hook, name, None,)
-                if hc is None:
-                    hc = HookCaller(
+                hook_caller = getattr(self.hook, name, None,)
+                if hook_caller is None:
+                    hook_caller = HookCaller(
                         name, self._hookexec, namespace, spec_opts,
                     )
                     setattr(
-                        self.hook, name, hc,
+                        self.hook, name, hook_caller,
                     )
                 else:
                     # plugins registered this hook without knowing the spec
-                    hc.set_specification(
+                    hook_caller.set_specification(
                         namespace, spec_opts,
                     )
-                    for hookfunction in hc.get_hookimpls():
+                    for hookfunction in hook_caller.get_hookimpls():
                         self._verify_hook(
-                            hc, hookfunction,
+                            hook_caller, hookfunction,
                         )
                 names.append(name)
 

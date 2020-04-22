@@ -72,13 +72,41 @@ class HookImpl:
 
 
 class HookSpec:
-    def __init__(self, namespace: Any, name: str, opts: dict):
+    def __init__(
+        self,
+        namespace: Any,
+        name: str,
+        *,
+        firstresult: bool = False,
+        historic: bool = False,
+        warn_on_impl: Optional[Warning] = None,
+    ):
         self.namespace = namespace
-        self.function = function = getattr(namespace, name)
         self.name = name
-        self.argnames, self.kwargnames = varnames(function)
-        self.opts = opts
-        self.warn_on_impl = opts.get("warn_on_impl")
+        self.function = getattr(namespace, name)
+        self.argnames, self.kwargnames = varnames(self.function)
+        self.firstresult = firstresult
+        self.historic = historic
+        self.warn_on_impl = warn_on_impl
+
+    @property
+    def opts(self) -> dict:
+        # legacy
+        return {
+            'firstresult': self.firstresult,
+            'historic': self.historic,
+            'warn_on_impl': self.warn_on_impl,
+        }
+
+    def __repr__(self) -> str:
+        # these are all False by default
+        truthy = [
+            attr
+            for attr in ('firstresult', 'historic', 'warn_on_impl')
+            if getattr(self, attr)
+        ]
+        suffix = (' ' + " ".join(truthy)) if truthy else ''
+        return f"<HookSpec {self.name!r} args={self.argnames!r}{suffix}>"
 
 
 def varnames(func):
