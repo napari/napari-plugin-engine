@@ -34,7 +34,7 @@ class HookImpl:
 
     @property
     def plugin_name(self) -> str:
-        return self._plugin.name if self._plugin else 'orphaned'
+        return self._plugin.name if self._plugin else 'None'
 
     @property
     def opts(self) -> dict:
@@ -51,9 +51,16 @@ class HookImpl:
         }
 
     def __repr__(self) -> str:
-        return "<HookImpl plugin_name=%r, plugin=%r>" % (
-            self.plugin_name,
-            self.plugin,
+        # these are all False by default
+        truthy = [
+            attr
+            for attr in ('hookwrapper', 'optionalhook', 'tryfirst', 'trylast')
+            if getattr(self, attr)
+        ]
+        suffix = (' ' + " ".join(truthy)) if truthy else ''
+        return (
+            f"<HookImpl plugin={self.plugin_name!r}"
+            f" spec={self.specname!r}{suffix}>"
         )
 
     def __call__(self, *args):
