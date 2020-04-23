@@ -99,4 +99,3 @@ PluginCallError
 
 .. autoclass:: PluginCallError
    :members:
-   
