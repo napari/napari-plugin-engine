@@ -9,12 +9,12 @@ stages:
 
 jobs:
   include:
-    - python: '3.6'
+    - python: '3.8'
       env: TOXENV=linting
       cache:
         directories:
           - $HOME/.cache/pre-commit
-    - python: '3.6'
+    - python: '3.8'
       env: TOXENV=docs
     - python: '3.6'
       env: TOXENV=py36-coverage

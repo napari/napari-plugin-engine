@@ -172,7 +172,7 @@ class HookCaller:
         new_order :  list of str or list of ``HookImpl`` instances
             The desired CALL ORDER of the hook implementations.  The list
             does *not* need to include every hook implementation in
-            ``self.get_hookimpls()``, but those that are not included
+            :meth:`~HookCaller.get_hookimpls`, but those that are not included
             will be left at the end of the call order.
 
         Raises

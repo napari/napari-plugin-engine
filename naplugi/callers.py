@@ -1,4 +1,4 @@
-"""Call loop machinery.ƒ"""
+"""Call loop machinery."""
 import sys
 from types import TracebackType
 from typing import Any, List, Optional, Tuple, Union, Type
