@@ -1,7 +1,12 @@
 import pytest
 
-from naplugi import HookimplMarker, HookspecMarker, PluginValidationError
-from naplugi.hooks import HookImpl
+from naplugi import (
+    HookimplMarker,
+    HookspecMarker,
+    PluginValidationError,
+    HookImpl,
+    HookSpec,
+)
 
 example_hookspec = HookspecMarker("example")
 example_implementation = HookimplMarker("example")
@@ -286,3 +291,11 @@ def test_hookrelay_registration_by_specname_raises(pm):
     pm.register(Plugin2())
     with pytest.raises(PluginValidationError):
         pm.check_pending()
+
+
+def test_legacy_specimpl_opt():
+    impl = HookImpl(lambda x: x)
+    assert impl.opts
+
+    spec = HookSpec(type("Hook", (), {'x': lambda x: x}), 'x')
+    assert spec.opts

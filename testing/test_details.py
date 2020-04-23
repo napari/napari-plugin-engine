@@ -83,12 +83,20 @@ def test_warning_on_call_vs_hookspec_arg_mismatch():
 
 
 def test_repr():
+    class Hook:
+        @hookspec
+        def myhook(arg):
+            ...
+
     class Plugin:
         @hookimpl
-        def myhook():
+        def myhook(arg):
             raise NotImplementedError()
 
     pm = PluginManager(hookspec.project_name)
+    pm.add_hookspecs(Hook)
+
+    assert repr(pm.hook.myhook.spec) == "<HookSpec 'myhook' args=('arg',)>"
 
     plugin = Plugin()
     pname = pm.register(plugin)

@@ -199,6 +199,14 @@ def test_register_historic(pm):
     assert out == [1, 10, 120, 12]
 
 
+def test_historic_firstresult_incompatible(pm):
+    with pytest.raises(ValueError):
+
+        @hookspec(historic=True, firstresult=True)
+        def he_method1(self, arg):
+            pass
+
+
 @pytest.mark.parametrize("result_callback", [True, False])
 def test_with_result_memorized(pm, result_callback):
     """Verify that ``HookCaller._maybe_apply_history()`

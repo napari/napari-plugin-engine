@@ -1,5 +1,5 @@
 from naplugi.implementation import varnames
-from naplugi.manager import _formatdef
+from naplugi.manager import _formatdef, ensure_namespace, temp_path_additions
 
 import sys
 import pytest
@@ -88,3 +88,33 @@ def test_formatdef():
         pass
 
     assert _formatdef(function4) == "function4(arg1, *args, **kwargs)"
+
+
+def test_ensure_namespace():
+    a = {'x': 1}
+    assert not getattr(a, 'x', None)
+    b = ensure_namespace(a)
+    assert getattr(b, 'x') == 1
+    assert a != b
+
+    with pytest.raises(ValueError):
+        # '0' is not a valid identifyer
+        ensure_namespace({0: 1})
+
+    class AlreadyNameSpace:
+        x = 1
+
+    # doesn't touch things that are already valid namespaces
+    assert ensure_namespace(AlreadyNameSpace) == AlreadyNameSpace
+
+
+def test_temp_path():
+    import sys
+
+    orig_path = set(sys.path)
+
+    with temp_path_additions('/path/') as pth:
+        assert sys.path == pth
+        assert '/path/' in sys.path
+
+    assert set(sys.path) == orig_path

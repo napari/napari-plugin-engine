@@ -1,6 +1,5 @@
 import pytest
-from naplugi import HookCallError, HookspecMarker, HookimplMarker
-from naplugi.hooks import HookImpl
+from naplugi import HookCallError, HookspecMarker, HookimplMarker, HookImpl
 from naplugi.callers import _multicall
 
 
