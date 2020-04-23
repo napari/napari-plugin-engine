@@ -9,12 +9,12 @@ stages:
 
 jobs:
   include:
-    - python: '3.8'
+    - python: '3.6'
       env: TOXENV=linting
       cache:
         directories:
           - $HOME/.cache/pre-commit
-    - python: '3.8'
+    - python: '3.6'
       env: TOXENV=docs
     - python: '3.6'
       env: TOXENV=py36-coverage
@@ -24,7 +24,7 @@ jobs:
       env: TOXENV=py38-coverage
 
     # - stage: deploy
-    #   python: '3.8'
+    #   python: '3.6'
     #   env:
     #   install: pip install -U setuptools
     #   script: skip
