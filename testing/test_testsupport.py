@@ -10,17 +10,6 @@ def test_spec(test_plugin_manager, add_specification):
     assert hasattr(test_plugin_manager.hook.my_spec, 'spec')
 
 
-def test_impl(test_hook_caller, add_implementation):
-    assert not test_hook_caller.get_hookimpls()
-
-    @add_implementation
-    def test_spec(arg):
-        return arg + 1
-
-    assert test_hook_caller.get_hookimpls()
-    assert test_hook_caller.get_hookimpls()[0].specname == 'test_spec'
-
-
 def test_full(test_plugin_manager, add_specification, add_implementation):
     relay = test_plugin_manager.hook
     assert not relay.items()
