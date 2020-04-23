@@ -38,7 +38,9 @@ def wrappers(request):
     return [wrapper for i in range(request.param)]
 
 
-@pytest.fixture(params=[_multicall, _legacymulticall], ids=lambda item: item.__name__)
+@pytest.fixture(
+    params=[_multicall, _legacymulticall], ids=lambda item: item.__name__
+)
 def callertype(request):
     return request.param
 

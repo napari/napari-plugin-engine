@@ -2,7 +2,6 @@
 ``PluginManager`` unit and public API testing.
 """
 import pytest
-import sys
 
 from naplugi import (
     PluginValidationError,
@@ -11,11 +10,6 @@ from naplugi import (
     HookspecMarker,
 )
 from naplugi.manager import importlib_metadata
-
-if sys.version_info >= (3, 8):
-    from importlib import metadata as importlib_metadata
-else:
-    import importlib_metadata
 
 
 hookspec = HookspecMarker("example")

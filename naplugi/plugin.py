@@ -1,6 +1,6 @@
 import inspect
 import sys
-from functools import cached_property, lru_cache
+from functools import lru_cache
 from typing import (
     Any,
     Dict,
@@ -8,7 +8,6 @@ from typing import (
     List,
     Optional,
     overload,
-    Type,
 )
 
 from .hooks import HookCaller
@@ -86,7 +85,7 @@ class Plugin:
         else:
             return self.object.__module__
 
-    @cached_property
+    @property
     def dist(self) -> Optional[importlib_metadata.Distribution]:
         return module_to_dist().get(self.module_name.split('.', 1)[0])
 
@@ -107,8 +106,8 @@ class Plugin:
     def get_metadata(self, arg: str, *args: None) -> Optional[str]:
         ...
 
-    @overload
-    def get_metadata(  # noqa
+    @overload  # noqa: F811
+    def get_metadata(  # noqa: F811
         self, arg: str, *args: str
     ) -> Dict[str, Optional[str]]:
         ...

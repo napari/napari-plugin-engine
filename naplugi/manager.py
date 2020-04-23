@@ -12,7 +12,6 @@ from typing import (
     Dict,
     Generator,
     List,
-    Literal,
     Optional,
     Set,
     Tuple,
@@ -576,10 +575,11 @@ class PluginManager:
         except StopIteration:
             return None
 
+    # TODO: fix sentinel
     def get_errors(
         self,
         plugin_name: Optional[str] = '_NULL',
-        error_type: Union[Type[BaseException], Literal['_NULL']] = '_NULL',
+        error_type: Union[Type[BaseException], str] = '_NULL',
     ) -> List[PluginError]:
         """Return a list of PluginErrors associated with this manager.
 

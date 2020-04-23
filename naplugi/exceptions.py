@@ -1,5 +1,5 @@
 from types import TracebackType
-from typing import Optional, Union, Type, TYPE_CHECKING, List, Literal, Tuple
+from typing import Optional, Union, Type, TYPE_CHECKING, List, Tuple
 import logging
 
 if TYPE_CHECKING:
@@ -38,12 +38,13 @@ class PluginError(Exception):
             return self.manager.plugins.get(self.plugin_name)
         return None
 
+    # TODO: fix sentinel
     @classmethod
     def get(
         cls,
-        manager: Union['PluginManager', None, Literal['_NULL']] = '_NULL',
+        manager: Union['PluginManager', None, str] = '_NULL',
         plugin_name: Optional[str] = '_NULL',
-        error_type: Union[Type[BaseException], Literal['_NULL']] = '_NULL',
+        error_type: Union[Type[BaseException], str] = '_NULL',
     ) -> List['PluginError']:
         """Return errors that have been logged, filtered by parameters.
 
