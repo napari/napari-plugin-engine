@@ -1,5 +1,7 @@
 import pytest
 
+pytest_plugins = "naplugi.testsupport"
+
 
 @pytest.fixture(
     params=[lambda spec: spec, lambda spec: spec()],
