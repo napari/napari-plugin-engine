@@ -1,0 +1,6 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+
+
+pre, code, .rst-content tt, .rst-content code, kbd, samp {
+  font-family: "IBM Plex Mono",'InconsolataRegular', 'Inconsolata', 'RobotoMonoRegular', 'Roboto Mono', monospace !important;
+}
