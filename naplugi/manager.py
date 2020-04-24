@@ -42,7 +42,7 @@ else:
 logger = getLogger(__name__)
 
 
-def ensure_namespace(obj: Any, name: str = 'Namespace') -> Type:
+def ensure_namespace(obj: Any, name: str = 'orphan') -> Type:
     if isinstance(obj, dict):
         bad_keys = [str(k) for k in obj.keys() if not str(k).isidentifier()]
         if bad_keys:
@@ -272,7 +272,7 @@ class PluginManager:
                         count += 1
                 except PluginError as e:
                     errors.append(e)
-                    self.set_blocked(name)
+                    self.set_blocked(ep.name)
                     if ignore_errors:
                         continue
                     raise e
@@ -308,7 +308,7 @@ class PluginManager:
             If ``ignore_errors`` is ``True`` and any errors are raised during
             registration.
         """
-        if not prefix:
+        if os.environ.get("NAPLUGI_DISABLE_PREFIX_PLUGINS") or not prefix:
             return 0, []
         count = 0
         errors: List[PluginError] = []
@@ -387,6 +387,8 @@ class PluginManager:
 
         try:
             return self.register(module, plugin_name)
+        except PluginError:
+            raise
         except Exception as exc:
             raise PluginRegistrationError(
                 plugin_name=plugin_name, manager=self, cause=exc,
@@ -441,7 +443,6 @@ class PluginManager:
             raise ValueError(f"Plugin module already registered: {namespace}")
 
         _plugin = Plugin(namespace, plugin_name)
-        self.plugins[plugin_name] = _plugin
         for hookimpl in _plugin.iter_implementations(self.project_name):
             hook_caller = getattr(self.hook, hookimpl.specname, None)
             # if we don't yet have a hookcaller by this name, create one.
@@ -458,6 +459,7 @@ class PluginManager:
             hook_caller._add_hookimpl(hookimpl)
             _plugin._hookcallers.append(hook_caller)
 
+        self.plugins[plugin_name] = _plugin
         return plugin_name
 
     def unregister(

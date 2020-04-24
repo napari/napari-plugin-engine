@@ -31,18 +31,38 @@ def app_good_plugin(tmp_path):
 
 
 @pytest.fixture
-def random_good_plugin(tmp_path):
+def good_entrypoint_plugin(tmp_path):
     """A good plugin that uses entry points."""
-    (tmp_path / "random_good_plugin.py").write_text(GOOD_PLUGIN)
-    distinfo = tmp_path / "random_good_plugin-1.2.3.dist-info"
+    (tmp_path / "good_entrypoint_plugin.py").write_text(GOOD_PLUGIN)
+    distinfo = tmp_path / "good_entrypoint_plugin-1.2.3.dist-info"
     distinfo.mkdir()
-    (distinfo / "top_level.txt").write_text('random_good_plugin')
+    (distinfo / "top_level.txt").write_text('good_entrypoint_plugin')
     (distinfo / "entry_points.txt").write_text(
-        "[app.plugin]\nrandom = random_good_plugin"
+        "[app.plugin]\ngood_entry = good_entrypoint_plugin"
     )
     (distinfo / "METADATA").write_text(
         "Metadata-Version: 2.1\n"
-        "Name: random\n"
+        "Name: good_entry\n"
+        "Version: 1.2.3\n"
+        "Author-Email: example@example.com\n"
+        "Home-Page: https://www.example.com\n"
+        "Requires-Python: >=3.6\n"
+    )
+
+
+@pytest.fixture
+def invalid_entrypoint_plugin(tmp_path):
+    """A good plugin that uses entry points."""
+    (tmp_path / "invalid_entrypoint_plugin.py").write_text(INVALID_PLUGIN)
+    distinfo = tmp_path / "invalid_entrypoint_plugin-1.2.3.dist-info"
+    distinfo.mkdir()
+    (distinfo / "top_level.txt").write_text('invalid_entrypoint_plugin')
+    (distinfo / "entry_points.txt").write_text(
+        "[app.plugin]\ninvalid = invalid_entrypoint_plugin"
+    )
+    (distinfo / "METADATA").write_text(
+        "Metadata-Version: 2.1\n"
+        "Name: invalid\n"
         "Version: 1.2.3\n"
         "Author-Email: example@example.com\n"
         "Home-Page: https://www.example.com\n"
@@ -83,14 +103,14 @@ def test_plugin_discovery_by_prefix(
     assert count == len(errs) == 1
 
     # the app_good_plugin module should have been found, with one hookimpl
-    assert 'app_good_plugin' in test_plugin_manager.plugins
+    assert 'app_good_plugin' in test_plugin_manager.plugins.keys()
     impls = test_plugin_manager.hook.test_specification.get_hookimpls()
     assert 'app_good_plugin' in [i.plugin_name for i in impls]
 
     # the plugin with the invalid spec is in the path that we loaded
     assert 'app_invalid_plugin.py' in os.listdir(tmp_path)
     # but it wasn't added to the plugin manager
-    assert 'app_invalid_plugin' not in test_plugin_manager.plugins
+    assert 'app_invalid_plugin' not in test_plugin_manager.plugins.keys()
     # However an error should have been logged for the invalid plugin
     assert not test_plugin_manager.get_errors('app_good_plugin')
     errs = test_plugin_manager.get_errors('app_invalid_plugin')
@@ -102,7 +122,7 @@ def test_plugin_discovery_by_prefix(
     # if we unblock the plugin and turn off ignore_errors
     # we'll get a registration error at discovery
     test_plugin_manager.set_blocked('app_invalid_plugin', False)
-    with pytest.raises(PluginRegistrationError):
+    with pytest.raises(PluginValidationError):
         test_plugin_manager.discover(
             tmp_path, prefix='app_', ignore_errors=False
         )
@@ -121,7 +141,11 @@ def test_plugin_discovery_by_prefix_with_bad_plugin(
 
 
 def test_plugin_discovery_by_entry_point(
-    tmp_path, add_specification, test_plugin_manager, random_good_plugin
+    tmp_path,
+    add_specification,
+    test_plugin_manager,
+    good_entrypoint_plugin,
+    invalid_entrypoint_plugin,
 ):
     @add_specification
     def test_specification(arg1, arg2):
@@ -134,15 +158,35 @@ def test_plugin_discovery_by_entry_point(
     # discover modules that begin with `app_`
     cnt, err = test_plugin_manager.discover(tmp_path, entry_point='app.plugin')
     # we should have had one success and one error.
-    assert cnt == 1
+    assert cnt == len(err) == 1
 
     # the app_good_plugin module should have been found, with one hookimpl
-    assert 'random' in test_plugin_manager.plugins
-    assert 'random' in [i.plugin_name for i in hook_caller.get_hookimpls()]
+    assert 'good_entry' in test_plugin_manager.plugins.keys()
+    assert 'good_entry' in [i.plugin_name for i in hook_caller.get_hookimpls()]
+
+    # the plugin with the invalid spec is in the path that we loaded
+    assert 'invalid_entrypoint_plugin.py' in os.listdir(tmp_path)
+    # but it wasn't added to the plugin manager
+    assert 'invalid' not in test_plugin_manager.plugins.keys()
+    # However an error should have been logged for the invalid plugin
+    assert not test_plugin_manager.get_errors('good_entry')
+    errs = test_plugin_manager.get_errors('invalid')
+    assert errs
+    assert isinstance(errs[0], PluginValidationError)
+    # and it should now be blocked
+    assert test_plugin_manager.is_blocked('invalid')
+
+    # if we unblock the plugin and turn off ignore_errors
+    # we'll get a registration error at discovery
+    test_plugin_manager.set_blocked('invalid', False)
+    with pytest.raises(PluginValidationError):
+        test_plugin_manager.discover(
+            tmp_path, entry_point='app.plugin', ignore_errors=False
+        )
 
 
 def test_lazy_autodiscovery(
-    tmp_path, add_specification, test_plugin_manager, random_good_plugin
+    tmp_path, add_specification, test_plugin_manager, good_entrypoint_plugin
 ):
     test_plugin_manager.discover_entry_point = 'app.plugin'
     assert test_plugin_manager.hook._needs_discovery is True
@@ -159,5 +203,94 @@ def test_lazy_autodiscovery(
         hook_caller = test_plugin_manager.hook.test_specification
 
     assert hook_caller.spec
-    assert test_plugin_manager.plugins.get('random')
+    assert test_plugin_manager.plugins.get('good_entry')
     assert test_plugin_manager.hook._needs_discovery is False
+
+
+def test_discovery_all_together(
+    tmp_path,
+    add_specification,
+    test_plugin_manager,
+    good_entrypoint_plugin,
+    invalid_entrypoint_plugin,
+    app_good_plugin,
+    app_invalid_plugin,
+):
+    @add_specification
+    def test_specification(arg1, arg2):
+        ...
+
+    hook_caller = test_plugin_manager.hook.test_specification
+    cnt, err = test_plugin_manager.discover(
+        tmp_path, entry_point='app.plugin', prefix='app_'
+    )
+    assert cnt == len(err) == 2
+
+    assert len(hook_caller.get_hookimpls()) == 2
+    assert 'app_good_plugin' in test_plugin_manager.plugins.keys()
+    assert 'good_entry' in test_plugin_manager.plugins.keys()
+
+
+def test_env_var_disable_all(
+    tmp_path,
+    add_specification,
+    test_plugin_manager,
+    good_entrypoint_plugin,
+    app_good_plugin,
+    monkeypatch,
+):
+    @add_specification
+    def test_specification(arg1, arg2):
+        ...
+
+    monkeypatch.setenv('NAPLUGI_DISABLE_PLUGINS', 1)
+    with pytest.warns(UserWarning):
+        cnt, err = test_plugin_manager.discover(
+            tmp_path, entry_point='app.plugin', prefix='app_'
+        )
+        assert cnt == len(err) == 0
+
+    assert 'app_good_plugin' not in test_plugin_manager.plugins.keys()
+    assert 'good_entry' not in test_plugin_manager.plugins.keys()
+
+
+def test_env_var_disable_entrypoints(
+    tmp_path,
+    add_specification,
+    test_plugin_manager,
+    good_entrypoint_plugin,
+    app_good_plugin,
+    monkeypatch,
+):
+    @add_specification
+    def test_specification(arg1, arg2):
+        ...
+
+    monkeypatch.setenv('NAPLUGI_DISABLE_ENTRYPOINT_PLUGINS', 1)
+    cnt, err = test_plugin_manager.discover(
+        tmp_path, entry_point='app.plugin', prefix='app_'
+    )
+    assert cnt == 1
+    assert 'app_good_plugin' in test_plugin_manager.plugins.keys()
+    assert 'good_entry' not in test_plugin_manager.plugins.keys()
+
+
+def test_env_var_disable_prefix(
+    tmp_path,
+    add_specification,
+    test_plugin_manager,
+    good_entrypoint_plugin,
+    app_good_plugin,
+    monkeypatch,
+):
+    @add_specification
+    def test_specification(arg1, arg2):
+        ...
+
+    monkeypatch.setenv('NAPLUGI_DISABLE_PREFIX_PLUGINS', 1)
+    cnt, err = test_plugin_manager.discover(
+        tmp_path, entry_point='app.plugin', prefix='app_'
+    )
+    assert cnt == 1
+    assert 'app_good_plugin' not in test_plugin_manager.plugins.keys()
+    assert 'good_entry' in test_plugin_manager.plugins.keys()

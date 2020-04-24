@@ -129,7 +129,7 @@ def test_register_mismatch_arg(he_pm):
 
     with pytest.raises(PluginValidationError) as excinfo:
         he_pm.register(plugin)
-    assert excinfo.value.plugin.object is plugin
+    assert excinfo.value.plugin_name == str(id(plugin))
 
 
 def test_register(pm):
@@ -148,6 +148,16 @@ def test_register(pm):
     pm.unregister(module=my)
     assert not pm.is_registered(my)
     assert not pm.get_plugin_for_module(my)
+
+
+def test_register_dict(he_pm):
+    assert not he_pm.hook.he_method1.get_hookimpls()
+    assert not he_pm.plugins
+    he_pm.register({'he_method1': lambda arg: arg + 1})
+    assert len(he_pm.plugins) == 1
+    assert 'orphan' in he_pm.plugins.keys()
+    assert he_pm.hook.he_method1.get_hookimpls()
+    assert he_pm.hook.he_method1(arg=1) == [2]
 
 
 def test_register_unknown_hooks(pm):
