@@ -43,6 +43,30 @@ logger = getLogger(__name__)
 
 
 def ensure_namespace(obj: Any, name: str = 'orphan') -> Type:
+    """Convert a ``dict`` to an object that provides ``getattr``.
+
+    Parameters
+    ----------
+    obj : Any
+        An object, may be a ``dict``, or a regular namespace object.
+    name : str, optional
+        A name to use for the new namespace, if created.  by default 'orphan'
+
+    Returns
+    -------
+    type
+        A namespace object. If ``obj`` is a ``dict``, creates a new ``type``
+        named ``name``, prepopulated with the key:value pairs from ``obj``.
+        Otherwise, if ``obj`` is not a ``dict``, will return the original
+        ``obj``.
+
+    Raises
+    ------
+    ValueError
+        If ``obj`` is a ``dict`` that contains keys that are not valid
+        `identifiers
+        <https://docs.python.org/3.3/reference/lexical_analysis.html#identifiers>`_.
+    """
     if isinstance(obj, dict):
         bad_keys = [str(k) for k in obj.keys() if not str(k).isidentifier()]
         if bad_keys:
@@ -81,19 +105,17 @@ def temp_path_additions(path: Optional[Union[str, List[str]]]) -> Generator:
 
 
 class PluginManager:
-    """ Core :py:class:`.PluginManager` class which manages registration
-    of plugin objects and 1:N hook calling.
+    """ Core class which manages registration of plugin objects and hook calls.
 
-    You can register new hooks by calling
-    :py:meth:`add_hookspecs(module_or_class) <.PluginManager.add_hookspecs>`.
-    You can register plugin objects (which contain hooks) by calling
-    :py:meth:`register(plugin) <.PluginManager.register>`.  The
-    :py:class:`.PluginManager` is initialized with a prefix that is searched
-    for in the names of the dict of registered plugin objects.
+    You can register new hooks by calling :meth:`add_hookspecs(namespace)
+    <.PluginManager.add_hookspecs>`. You can register plugin objects (which
+    contain hooks) by calling :meth:`register(namespace)
+    <.PluginManager.register>`.  The ``PluginManager`` is initialized
+    with a ``project_name`` that is used when discovering `hook specifications`
+    and `hook implementations`.
 
-    For debugging purposes you can call
-    :py:meth:`.PluginManager.enable_tracing` which will subsequently send debug
-    information to the trace helper.
+    For debugging purposes you may call :meth:`.PluginManager.enable_tracing`
+    which will subsequently send debug information to the trace helper.
     """
 
     def __init__(

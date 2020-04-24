@@ -10,9 +10,67 @@ from .exceptions import PluginCallError
 from .implementation import HookImpl, HookSpec
 
 HookExecFunc = Callable[['HookCaller', List[HookImpl], dict], HookResult]
+"""A function that loops calling a list of :class:`~naplugi.HookImpl` s and
+returns a :class:`~naplugi.HookResult`.
+
+Parameters
+----------
+hook_caller : HookCaller
+    a :class:`HookCaller` instance.
+hook_impls : List[HookImpl]
+    a list of :class:`~naplugi.HookImpl` instances to call.
+kwargs : dict
+    a mapping of keyword arguments to provide to the implementation.
+
+Returns
+-------
+result : HookResult
+    The :class:`~naplugi.HookResult` object resulting from the call loop.
+"""
 
 
 class HookCaller:
+    """The primary hook-calling object.
+
+    A :class:`PluginManager` may have multiple ``HookCaller`` objects and they
+    are stored in the ``plugin_manager.hook`` namespace, named after the `hook
+    specification` that they represent.  For instance:
+
+    .. code-block:: python
+
+       pm = PluginManager("demo")
+       pm.add_hookspec(some_module)
+       # assuming `some_module` had an @hookspec named `my specification`
+       assert isinstance(pm.hook.my_specification, HookCaller)
+
+    Each ``HookCaller`` instance stores all of the :class:`HookImpl` objects
+    discovered during :meth:`plugin registration <PluginManager.register>`
+    (each of which capture the implementation of a specific plugin for this
+    hook specification).
+
+    The ``HookCaller`` instance also usually creates and stores a reference to
+    the :class:`HookSpec` instance that encapsulates information about the hook
+    specification, (at ``HookCaller.spec``)
+
+    Parameters
+    ----------
+    name : str
+        The name of the `hook specification` that this ``HookCaller``
+        represents.
+    hook_execute : Callable
+        A :data:`.HookExecFunc` function.  In almost every case, this will be
+        provided by the :class:`PluginManager` during hook registration as
+        :meth:`PluginManager._hookexec`... which is, in turn, mostly just a
+        wrapper around :func:`._multicall`.
+    namespace : Any, optional
+        An namespace (such as a module or class) to search during `HookSpec`
+        creation for functions decorated with ``@hookspec`` named with the
+        string ``name``.
+    spec_opts : Optional[dict], optional
+        keyword arguments to be passed when creating the :class:`HookSpec`
+        instance at ``self.spec``.
+    """
+
     def __init__(
         self,
         name: str,

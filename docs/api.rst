@@ -22,12 +22,22 @@ PluginManager
 
 .. autoclass:: PluginManager
    :members:
+   :private-members:
+   :exclude-members: _load_and_register
 
 HookCaller
 ==========
 
 .. autoclass:: HookCaller
    :members:
+   :private-members:
+   :special-members:
+   :exclude-members:
+      __init__,
+      __repr__,
+      __weakref__,
+      _check_call_kwargs,
+      _maybe_apply_history,
 
 HookResult
 ==========
@@ -57,12 +67,16 @@ HookspecMarker
 
 .. autoclass:: HookspecMarker
    :members:
+   :special-members:
+   :exclude-members: __init__, __weakref__
 
 HookimplMarker
 --------------
 
 .. autoclass:: HookimplMarker
    :members:
+   :special-members:
+   :exclude-members: __init__, __weakref__
 
 Exceptions
 ==========
@@ -99,3 +113,18 @@ PluginCallError
 
 .. autoclass:: PluginCallError
    :members:
+
+Extra Functions
+===============
+
+.. autofunction:: naplugi.hooks._multicall
+
+.. autofunction:: naplugi.manager.ensure_namespace
+
+.. autofunction:: naplugi.manager.temp_path_additions
+
+
+Types
+=====
+
+.. autodata:: naplugi.hooks.HookExecFunc

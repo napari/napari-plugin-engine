@@ -21,7 +21,7 @@ ExcInfo = Union[
 
 
 class HookResult:
-    """A class to store/modify results from a _multicall hook loop.
+    """A class to store/modify results from a :func:`~hooks._multicall` hook loop.
 
     Results are accessed in ``.result`` property, which will also raise
     any exceptions that occured during the hook loop.
@@ -128,7 +128,7 @@ class HookResult:
 def _multicall(
     hook_impls: List[HookImpl], caller_kwargs: dict, firstresult: bool = False,
 ) -> HookResult:
-    """Loop through ``hook_impls`` with ``**caller_kwargs`` and return results.
+    """The primary :class:`~naplugi.HookImpl` call loop.
 
     Parameters
     ----------

@@ -7,6 +7,7 @@ if TYPE_CHECKING:
 
 
 class HookImpl:
+    """A class to encapsulate hook implementations."""
     def __init__(
         self,
         function: Callable,
@@ -72,6 +73,8 @@ class HookImpl:
 
 
 class HookSpec:
+    """A class to encapsulate hook specifications."""
+
     def __init__(
         self,
         namespace: Any,
