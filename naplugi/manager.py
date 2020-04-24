@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import os
+from pathlib import Path
 import pkgutil
 import sys
 import warnings
@@ -66,9 +67,10 @@ def temp_path_additions(path: Optional[Union[str, List[str]]]) -> Generator:
     sys_path : list of str
         The current sys.path for the context.
     """
-    if isinstance(path, str):
+    if isinstance(path, (str, Path)):
         path = [path]
-    to_add = [p for p in path if p not in sys.path] if path else []
+    path = [os.fspath(p) for p in path] if path else []
+    to_add = [p for p in path if p not in sys.path]
     for p in to_add:
         sys.path.insert(0, p)
     try:
@@ -98,28 +100,18 @@ class PluginManager:
         self,
         project_name: str,
         *,
-        autodiscover: Union[bool, str] = False,
-        discover_entrypoint: str = '',
+        discover_entry_point: str = '',
         discover_prefix: str = '',
     ):
         self.project_name = project_name
-        # mapping of name -> module
-
+        self.discover_entry_point = discover_entry_point
+        self.discover_prefix = discover_prefix
+        # mapping of name -> Plugin object
         self.plugins: Dict[str, Plugin] = {}
         self._blocked: Set[str] = set()
 
         self.trace = _tracing.TagTracer().get("pluginmanage")
         self.hook = _HookRelay(self)
-
-        # discover external plugins
-        self.discover_entrypoint = discover_entrypoint
-        self.discover_prefix = discover_prefix
-        if autodiscover:
-            if isinstance(autodiscover, str):
-                self.discover(autodiscover)
-            else:
-                self.discover()
-
         self._inner_hookexec: HookExecFunc = lambda c, m, k: c.multicall(
             m, k, firstresult=c.is_firstresult
         )
@@ -159,7 +151,11 @@ class PluginManager:
         return self._inner_hookexec(caller, methods, kwargs)
 
     def discover(
-        self, path: Optional[str] = None
+        self,
+        path: Optional[str] = None,
+        entry_point: str = None,
+        prefix: str = None,
+        ignore_errors: bool = True,
     ) -> Tuple[int, List[PluginError]]:
         """Discover modules by both naming convention and entry_points
 
@@ -179,12 +175,16 @@ class PluginManager:
         path : str, optional
             If a string is provided, it is added to sys.path before importing,
             and removed at the end. by default True
+        entry_point : str, optional
 
         Returns
         -------
         count : int
             The number of plugin modules successfully loaded.
         """
+        entry_point = entry_point or self.discover_entry_point
+        prefix = prefix or self.discover_prefix
+
         self.hook._needs_discovery = False
         # allow debugging escape hatch
         if os.environ.get("NAPLUGI_DISABLE_PLUGINS"):
@@ -197,8 +197,8 @@ class PluginManager:
         errs: List[PluginError] = []
         with temp_path_additions(path):
             count = 0
-            count, errs = self.load_entrypoints(self.discover_entrypoint)
-            n, err = self.load_modules_by_prefix(self.discover_prefix)
+            count, errs = self.load_entrypoints(entry_point, '', ignore_errors)
+            n, err = self.load_modules_by_prefix(prefix, ignore_errors)
             count += n
             errs += err
             if count:

@@ -3,7 +3,7 @@ import sys
 from typing import Callable, Optional, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .manager import Plugin  # noqa: F401
+    from .plugin import Plugin  # noqa: F401
 
 
 class HookImpl:
@@ -109,6 +109,7 @@ class HookSpec:
         return f"<HookSpec {self.name!r} args={self.argnames!r}{suffix}>"
 
 
+# TODO: can this be improved?
 def varnames(func):
     """Return tuple of positional and keywrord argument names for a function,
     method, class or callable.
