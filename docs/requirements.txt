@@ -2,4 +2,5 @@ sphinx
 pygments
 sphinx_autodoc_typehints
 sphinx_rtd_theme
+sphinx-press-theme
 importlib-metadata>=0.12
