@@ -89,7 +89,7 @@ class HookSpec:
         self.name = name
         self.function = getattr(namespace, name)
         self.argnames, self.kwargnames = varnames(self.function)
-        for reserved in ('_plugin', '_skip_impls', '_return_result_obj'):
+        for reserved in ('_plugin', '_skip_impls'):
             if reserved in self.argnames:
                 raise ValueError(
                     f'Hook specifications may not have argument: "{reserved}".'

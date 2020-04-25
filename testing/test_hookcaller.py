@@ -206,12 +206,7 @@ def test_hookspec_reserved_argnames(pm):
         def he_myhook1(_skip_impls):
             pass
 
-    class HookSpecC:
-        @example_hookspec()
-        def he_myhook1(arg1, _return_result_obj):
-            pass
-
-    for cls in (HookSpecA, HookSpecB, HookSpecC):
+    for cls in (HookSpecA, HookSpecB):
         with pytest.raises(ValueError):
             pm.add_hookspecs(cls)
 

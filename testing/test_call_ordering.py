@@ -108,3 +108,55 @@ def test_reordering_hook_caller_raises(dummy_plugin_manager):
     with pytest.raises(ValueError):
         # too many values
         hook_caller.bring_to_front(['p1', 'p1', 'p2', 'p4', 'p3', 'p1'])
+
+    with pytest.raises(TypeError):
+        # it has to be a list
+        hook_caller.bring_to_front('p1')
+
+
+def test_hook_caller_kwargs(dummy_plugin_manager):
+    hook_caller = dummy_plugin_manager.hooks.myhook
+    assert hook_caller() == ['p2', 'p3', 'p1']
+
+    for p in ['p2', 'p3', 'p1']:
+        # call with a specific plugin
+        assert hook_caller(_plugin=p) == p
+        impl = hook_caller.get_plugin_implementation(p)
+        # call without specific plugins/impls
+        expected = ['p2', 'p3', 'p1']
+        expected.remove(p)
+        assert hook_caller(_skip_impls=[impl]) == expected
+
+
+def test_disable_impls(dummy_plugin_manager):
+    hook_caller = dummy_plugin_manager.hooks.myhook
+    assert hook_caller() == ['p2', 'p3', 'p1']
+
+    for p in ['p2', 'p3', 'p1']:
+        # call with a specific plugin
+        expected = ['p2', 'p3', 'p1']
+        assert hook_caller() == expected
+        assert hook_caller(_plugin=p) == p
+        assert hook_caller(_plugin=p) == hook_caller._call_plugin(p)
+        impl = hook_caller.get_plugin_implementation(p)
+        # call without specific plugins/impls
+        expected.remove(p)
+        assert hook_caller(_skip_impls=[impl]) == expected
+        hook_caller.disable_plugin(p)
+        assert hook_caller() == expected
+        hook_caller.enable_plugin(p)
+        assert set(hook_caller()) == set([p] + expected)
+
+    with pytest.raises(TypeError):
+        # cannot call wrappers directly
+        hook_caller(_plugin='wrapper')
+
+
+def test_get_plugin_implementation(dummy_plugin_manager):
+    hook_caller = dummy_plugin_manager.hooks.myhook
+    impl = hook_caller.get_plugin_implementation('p1')
+    assert impl
+    assert impl.plugin_name == 'p1'
+
+    with pytest.raises(KeyError):
+        hook_caller.get_plugin_implementation('pasdfsdf1')
