@@ -62,7 +62,7 @@ def double_convention_plugin(tmp_path):
     (distinfo / "METADATA").write_text(
         "Metadata-Version: 2.1\n"
         "Name: double-package\n"
-        "Version: 1.2.3\n"
+        "Version: 3.2.1\n"
         "Author-Email: example@example.com\n"
         "Home-Page: https://www.example.com\n"
         "Requires-Python: >=3.6\n"
@@ -97,6 +97,38 @@ def app_invalid_plugin(tmp_path):
 @pytest.fixture
 def app_broken_plugin(tmp_path):
     (tmp_path / "app_broken_plugin.py").write_text('raise ValueError("broke")')
+
+
+def test_plugin_meta(
+    tmp_path,
+    add_specification,
+    test_plugin_manager,
+    app_good_plugin,
+    good_entrypoint_plugin,
+    double_convention_plugin,
+):
+
+    cnt, err = test_plugin_manager.discover(
+        tmp_path, entry_point='app.plugin', prefix='app_'
+    )
+    plugin_names = set(test_plugin_manager.plugins)
+    assert plugin_names == {'double', 'good_entry', 'app_good_plugin'}
+
+    versions = {
+        'double': '3.2.1',
+        'good_entry': '1.2.3',
+        'app_good_plugin': '',
+    }
+    for name, plug in test_plugin_manager.plugins.items():
+        assert f'"{name}"' in repr(plug)
+        assert versions[name] == plug.version
+        if name == 'app_good_plugin':
+            # this one doesn't have any metadata.. but it will have plugin_name
+            meta = plug.standard_meta
+            meta.pop('plugin_name')
+            assert not any(meta.values())
+        else:
+            assert plug.version == plug.standard_meta.get('version')
 
 
 @pytest.mark.parametrize(

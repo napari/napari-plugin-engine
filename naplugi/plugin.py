@@ -111,11 +111,11 @@ class Plugin:
         if self.dist:
             version = self.dist.metadata.get('version')
         if not version and inspect.ismodule(self.object):
-            version = getattr(self.object, '__version__')
+            version = getattr(self.object, '__version__', None)
         if not version:
             top_module = self.module_name.split('.', 1)[0]
             if top_module in sys.modules:
-                version = getattr(sys.modules[top_module], '__version__')
+                version = getattr(sys.modules[top_module], '__version__', None)
         return str(version) if version else ''
 
     @overload
@@ -155,8 +155,8 @@ class Plugin:
                     dct[a] = self.version
                 else:
                     dct[a] = dist.metadata.get(a)
-        if dct and len(args) == 1:
-            return dct[args[0]]
+        if len(args) == 1:
+            return dct[args[0]] if dct else None
         return dct
 
     @property
