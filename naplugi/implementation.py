@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 class HookImpl:
     """A class to encapsulate hook implementations."""
+
     def __init__(
         self,
         function: Callable,
