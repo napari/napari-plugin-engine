@@ -47,13 +47,13 @@ decorated as hook specifications for ``'my_project'`` using a
    my_project_hook_specification = HookspecMarker('my_project')
 
    @my_project_hook_specification
-   def my_hook_specification(arg1: int, arg2: int): -> int:
+   def do_something(arg1: int, arg2: int): -> int:
        """Take two integers and return one integer."""
 
 After calling :meth:`~PluginManager.add_hookspecs`, your ``plugin_manager``
-instance will have some new :class:`HookCaller` instances created under the
-``plugin_manager.hooks`` namespace.  In this case, there will be a new one at 
-``plugin_manager.hooks.my_hook_specification``.
+instance will have a new :class:`HookCaller` instance created under the
+``plugin_manager.hooks`` namespace, for each hook specification discovered.
+In this case, there will be a new one at ``plugin_manager.hooks.do_something``.
 
 Plugins may then provide *implementations* for your hook specifications, by
 creating classes or modules that contain functions that are decorated with an
@@ -69,7 +69,7 @@ project name (in this example: ``'my_project'``)
    my_project_hook_implementation = HookimplMarker('my_project')
 
    @my_project_hook_implementation
-   def my_hook_specification(arg1, arg2):
+   def do_something(arg1, arg2):
        return arg1 + arg2
 
 You may directly *register* these modules with the `plugin_manager` ... 
@@ -112,15 +112,15 @@ implementations found in plugins, as :class:`HookImpl` objects on the
 
 .. code-block:: python
 
-   # show all implementations for my_hook_specification
-   plugin_manager.hooks.my_hook_specification.get_hookimpls()
+   # show all implementations for do_something
+   plugin_manager.hooks.do_something.get_hookimpls()
 
 Finally, you can call some or all of the plugin implementation functions by
 directly calling the :class:`HookCaller` object:
 
 .. code-block:: python
 
-   result = plugin_manager.hooks.my_hook_specification(arg1=2, arg2=7)
+   result = plugin_manager.hooks.do_something(arg1=2, arg2=7)
 
    # assuming only some_plugin.py from above is registered: 
    print(result)  # [9]
