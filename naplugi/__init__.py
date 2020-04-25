@@ -11,6 +11,7 @@ from .hooks import HookCaller
 from .implementation import HookImpl, HookSpec
 from .manager import PluginManager
 from .markers import HookimplMarker, HookspecMarker
+from .plugin import Plugin
 
 __version__ = "0.0.0"
 
@@ -27,6 +28,7 @@ __all__ = [
     "HookspecMarker",
     "napari_hook_implementation",
     "napari_hook_specification",
+    "Plugin",
     "PluginCallError",
     "PluginError",
     "PluginImportError",

@@ -9,6 +9,7 @@ naplugi API
    :nosignatures:
 
    PluginManager
+   Plugin
    HookCaller
    HookResult
    HookImpl
@@ -24,6 +25,12 @@ PluginManager
    :members:
    :private-members:
    :exclude-members: _load_and_register
+
+Plugin
+======
+
+.. autoclass:: Plugin
+   :members:
 
 HookCaller
 ==========

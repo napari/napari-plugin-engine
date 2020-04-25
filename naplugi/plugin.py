@@ -31,6 +31,21 @@ def module_to_dist() -> Dict[str, importlib_metadata.Distribution]:
 
 
 class Plugin:
+    """A registered plugin object.
+
+    The actual plugin object that was registered is available at
+    ``Plugin.object``, and the plugin name is ``Plugin.name``.
+
+    Metadata from ``dist-info`` is available via :meth:`~.Plugin.get_metadata`
+    or :data:`~.Plugin.standard_meta`
+
+    Parameters
+    ----------
+    namespace : Any
+        [description]
+    name : Optional[str], optional
+        [description], by default None
+    """
     def __init__(self, namespace: Any, name: Optional[str] = None):
         self.object = namespace
         self._name = name

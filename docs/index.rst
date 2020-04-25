@@ -14,7 +14,7 @@ While much of the original API described in the `pluggy docs
 are definitely some breaking changes and different conventions here.
 
 Usage overview
-------------
+--------------
 
 .. currentmodule:: naplugi
 
@@ -130,6 +130,56 @@ results are returned in a list.  However, this is configurable and depends on
 how the ``@my_project_hook_specification`` was used, and how the
 :class:`HookCaller` was called
 
+How the ``plugin_name`` is chosen
+-------------------------------
+
+**1. If plugin discovery via entry_points is used**
+
+(e.g. ``plugin_manager.discover(entry_point='app.plugin')``), then plugins
+will be named using the name of the entry_point provided by each plugin.  Note,
+a single package may provide multiple plugins via entry points.  For example,
+if a package had the following ``entry_points`` declared in their ``setup.py``
+file:
+
+.. code-block:: python
+
+   # setup.py
+
+   setup(
+   ...
+   entry_points={'app.plugin': ['plugin1 = module_a', 'plugin2 = module_b']},
+   ...
+   )
+
+... then ``manager.discover(entry_point='app.plugin')`` would register two
+plugins, named ``"plugin1"`` (which would inspect ``module_a`` for
+implementations) and ``"plugin2"`` (which would inspect ``module_b`` for
+implementations).
+
+**2. If plugin discovery via naming convention is used**
+
+(e.g. ``plugin_manager.discover(prefix='app_')``), then... 
+
+   **2a. If a** ``dist-info`` **folder is found for the module**
+   
+   Then the plugin will be named using the `Name key
+   <https://packaging.python.org/specifications/core-metadata/#name>`_ in the
+   distribution ``METADATA`` file if one is available.  Usually, this will come
+   from having a ``setup(name="distname", ...)`` entry in a ``setup.py`` file.
+   See `Core metadata specifications
+   <https://packaging.python.org/specifications/core-metadata/#name>`_ and `PEP
+   566 <https://www.python.org/dev/peps/pep-0566/>`_ for details.
+
+   **2a. If no distribution metadata can be located**
+
+   The the plugin will be named using the name of the module itself.
+
+**3. If a plugin is directly registered**
+
+(e.g. ``plugin_manager.register(object, name)``), then if a ``name`` argument
+is provided to the :meth:`PluginManager.register` method, it will be used as
+the ``plugin_name``, otherwise, the string form of the object is used:
+``str(id(object))``
 
 .. toctree::
    :maxdepth: 3
