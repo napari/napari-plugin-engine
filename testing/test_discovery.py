@@ -1,7 +1,6 @@
 import pytest
 import os
 from naplugi import (
-    PluginRegistrationError,
     PluginImportError,
     PluginValidationError,
 )
