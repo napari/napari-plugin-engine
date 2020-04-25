@@ -46,6 +46,7 @@ class Plugin:
     name : Optional[str], optional
         [description], by default None
     """
+
     def __init__(self, namespace: Any, name: Optional[str] = None):
         self.object = namespace
         self._name = name

@@ -10,9 +10,6 @@ from naplugi import (
 )
 
 
-pytest_plugins = "naplugi.testsupport"
-
-
 @pytest.fixture(
     params=[lambda spec: spec, lambda spec: spec()],
     ids=["spec-is-class", "spec-is-instance"],
