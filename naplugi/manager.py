@@ -198,11 +198,20 @@ class PluginManager:
             If a string is provided, it is added to sys.path before importing,
             and removed at the end. by default True
         entry_point : str, optional
+            An entry_point group to search for, by default None
+        prefix : str, optional
+            If ``provided``, modules in the environment starting with
+            ``prefix`` will be imported and searched for hook implementations
+            by default None.
+        ignore_errors : bool, optional
+            If ``True``, errors will be gathered and returned at the end.
+            Otherwise, they will be raised immediately. by default True
 
         Returns
         -------
-        count : int
-            The number of plugin modules successfully loaded.
+        (count, errs) : Tuple[int, List[PluginError]]
+            The number of succefully loaded modules, and a list of errors that
+            occurred (if ``ignore_errors`` was ``True``)
         """
         entry_point = entry_point or self.discover_entry_point
         prefix = prefix or self.discover_prefix

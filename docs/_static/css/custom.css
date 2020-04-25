@@ -4,3 +4,96 @@
 pre, code, .rst-content tt, .rst-content code, kbd, samp {
   font-family: "IBM Plex Mono",'InconsolataRegular', 'Inconsolata', 'RobotoMonoRegular', 'Roboto Mono', monospace !important;
 }
+
+dl {
+  padding-left: 1rem;
+}
+
+.sig-name.descname {
+  font-size: 1.1em;
+  font-weight: bold;
+  padding: 0 0 3px;
+}
+
+a code span.pre {
+  font-weight: bold;
+}
+
+.sig-param {
+  font-family: "IBM Plex Mono",'InconsolataRegular', 'Inconsolata', 'RobotoMonoRegular', 'Roboto Mono', monospace !important;
+  margin-left: 0.3em;
+  font-size: 0.9rem;
+  color: darkcyan;
+  font-style: initial;
+}
+
+.sig-name.descname {
+  font-size: 1.1em;
+  font-weight: bold;
+  padding: 0 5px 3px;
+}
+
+.viewcode-link {
+  font-size: 0.73rem;
+}
+
+li p {
+  margin-bottom: 0.8rem;
+}
+
+dt.field-odd, dt.field-even, p.rubric {
+  font-size: 1.0em;
+  font-weight: bold;
+  color: #4d6a86;
+  /* background-color: linen; */
+  padding: 0.2rem;
+  margin-top: 1.1rem;
+  padding-left: 0.7rem;
+}
+
+.py.class .field-list .field-odd li p strong:first-child {
+  font-family: "IBM Plex Mono",'InconsolataRegular', 'Inconsolata', 'RobotoMonoRegular', 'Roboto Mono', monospace;
+  margin-left: 0px;
+  text-indent: 0.1rem;
+}
+
+code.sig-name.descname {
+  font-weight: 700;
+  color: darkslateblue;
+}
+
+.sidebar {
+  width: 16.5rem;
+}
+
+.page {
+  padding-left: 16.5rem;
+}
+
+
+@media (max-width: 959px) {
+  .sidebar {
+      font-size:15px;
+      width: 15rem;
+  }
+  .page {
+      padding-left: 15rem;
+  }
+}
+
+@media (max-width: 719px) {
+  .page {
+      padding-left: 0;
+  }
+}
+
+.search input[type="text"] {
+  border: none;
+  padding: 3px;
+  background-color: #efefef;
+  padding: 7px 15px;
+  width: 59%;
+  font-size: 16px;
+  border-radius: 5px;
+  margin-top: 7px;
+}
