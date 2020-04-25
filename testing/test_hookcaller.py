@@ -193,6 +193,29 @@ def test_hookspec(pm):
     assert not pm.hook.he_myhook3.spec.firstresult
 
 
+def test_hookspec_reserved_argnames(pm):
+    """Certain argument names are reserved and cannot be used in specs."""
+
+    class HookSpecA:
+        @example_hookspec()
+        def he_myhook1(_plugin):
+            pass
+
+    class HookSpecB:
+        @example_hookspec()
+        def he_myhook1(_skip_impls):
+            pass
+
+    class HookSpecC:
+        @example_hookspec()
+        def he_myhook1(arg1, _return_result_obj):
+            pass
+
+    for cls in (HookSpecA, HookSpecB, HookSpecC):
+        with pytest.raises(ValueError):
+            pm.add_hookspecs(cls)
+
+
 @pytest.mark.parametrize(
     "name", ["hookwrapper", "optionalhook", "tryfirst", "trylast"]
 )
