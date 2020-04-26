@@ -26,7 +26,7 @@ jobs:
     - stage: deploy
       python: '3.6'
       env:
-      install: pip install -U setuptools
+      install: pip install -U setuptools setuptools_scm
       script: skip
       deploy:
         provider: pypi
