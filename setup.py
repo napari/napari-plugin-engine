@@ -46,6 +46,7 @@ def main():
         extras_require=EXTRAS_REQUIRE,
         classifiers=classifiers,
         packages=["naplugi"],
+        entry_points={"pytest11": ["naplugi = naplugi._testsupport"]},
     )
 
 
