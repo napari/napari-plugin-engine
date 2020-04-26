@@ -27,7 +27,8 @@ jobs:
       python: '3.6'
       env:
       install: pip install -U setuptools setuptools_scm
-      script: skip
+      script:
+        - git tag
       deploy:
         provider: pypi
         user: "__token__"

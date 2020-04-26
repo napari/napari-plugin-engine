@@ -31,7 +31,7 @@ EXTRAS_REQUIRE = {
 def main():
     setup(
         name="napari-plugin-engine",
-        description="napari plugin mechanism, fork of pluggy",
+        description="napari plugin engine, fork of pluggy",
         long_description=long_description,
         long_description_content_type='text/markdown',
         license="MIT license",
@@ -43,6 +43,8 @@ def main():
         python_requires=">=3.6.*",
         install_requires=['importlib-metadata>=0.12;python_version<"3.8"'],
         extras_require=EXTRAS_REQUIRE,
+        setup_requires=["setuptools-scm"],
+        use_scm_version={"write_to": "napari_plugin_engine/_version.py"},
         classifiers=classifiers,
         packages=["napari_plugin_engine"],
         entry_points={
