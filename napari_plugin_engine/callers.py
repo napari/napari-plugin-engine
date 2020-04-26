@@ -40,17 +40,6 @@ class HookResult:
     plugin_errors : list
         A list of any :class:`napari.plugins.exceptions.PluginCallError`
         instances that were created during the multicall loop.
-
-    Attributes
-    ----------
-    result : list or any
-        The result (if ``firstresult``) or results from the hook call.  The
-        result property will raise any errors in ``excinfo`` when accessed.
-    implementation : list or any
-        The HookImpl instance (if ``firstresult``) or instances that were
-        responsible for each result in ``result``.
-    is_firstresult : bool
-        Whether this HookResult came from a ``firstresult`` multicall.
     """
 
     def __init__(
@@ -61,22 +50,25 @@ class HookResult:
         plugin_errors: Optional[List[PluginCallError]] = None,
     ):
         self._result: Any = []
-        self.implementation: Any = [None if firstresult else []]
+        #: The HookImpl(s) that were responsible for each result in ``result``
+        self.implementation: Optional[Union[HookImpl, List[HookImpl]]] = []
+        #: Whether this HookResult came from a ``firstresult`` multicall.
+        self.is_firstresult: bool = firstresult
+        self._excinfo = excinfo
+        self.plugin_errors = plugin_errors
+
         if result:
             self._result, self.implementation = tuple(zip(*result))
             self._result = list(self._result)
         if firstresult:
             if self._result:
                 self._result = self._result[0]
-                self.implementation = self.implementation[0]
+                self.implementation = self.implementation[0]  # type: ignore
             else:
                 self._result = None
                 self.implementation = None
 
-        self._excinfo = excinfo
-        self.is_firstresult = firstresult
-        self.plugin_errors = plugin_errors
-        # str with name of hookwrapper that override result
+        #: Name of last hookwrapper that changed the result, if any
         self._modified_by: Optional[str] = None
 
     @property
@@ -164,8 +156,7 @@ def _multicall(
         teardowns = []
         try:
             for hook_impl in reversed(hook_impls):
-                # the `hook_impl.enabled` attribute is specific to napari
-                # it is not recognized or implemented by pluggy
+                # skip disabled hook implementations
                 if not getattr(hook_impl, 'enabled', True):
                     continue
                 args: List[Any] = []
@@ -175,12 +166,11 @@ def _multicall(
                         for argname in hook_impl.argnames
                     ]
                 except KeyError:
-                    for argname in hook_impl.argnames:
-                        if argname not in caller_kwargs:
-                            raise HookCallError(
-                                "hook call must provide argument %r"
-                                % (argname,)
-                            )
+                    raise HookCallError(
+                        "hook call must provide argument the following "
+                        f"arguments: {set(hook_impl.argnames)!r}, but provided"
+                        f" {set(caller_kwargs)!r}"
+                    )
 
                 if hook_impl.hookwrapper:
                     try:

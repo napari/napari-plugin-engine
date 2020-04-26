@@ -22,6 +22,7 @@ from typing import (
 
 from . import _tracing
 from .callers import HookResult
+from .dist import _top_level_module_to_dist, importlib_metadata
 from .exceptions import (
     PluginError,
     PluginImportError,
@@ -31,76 +32,12 @@ from .exceptions import (
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImpl
 from .markers import HookimplMarker, HookspecMarker
-from .dist import importlib_metadata, _top_level_module_to_dist
-
 
 logger = getLogger(__name__)
 
 
-def ensure_namespace(obj: Any, name: str = 'orphan') -> Type:
-    """Convert a ``dict`` to an object that provides ``getattr``.
-
-    Parameters
-    ----------
-    obj : Any
-        An object, may be a ``dict``, or a regular namespace object.
-    name : str, optional
-        A name to use for the new namespace, if created.  by default 'orphan'
-
-    Returns
-    -------
-    type
-        A namespace object. If ``obj`` is a ``dict``, creates a new ``type``
-        named ``name``, prepopulated with the key:value pairs from ``obj``.
-        Otherwise, if ``obj`` is not a ``dict``, will return the original
-        ``obj``.
-
-    Raises
-    ------
-    ValueError
-        If ``obj`` is a ``dict`` that contains keys that are not valid
-        `identifiers
-        <https://docs.python.org/3.3/reference/lexical_analysis.html#identifiers>`_.
-    """
-    if isinstance(obj, dict):
-        bad_keys = [str(k) for k in obj.keys() if not str(k).isidentifier()]
-        if bad_keys:
-            raise ValueError(
-                f"dict contained invalid identifiers: {', '.join(bad_keys)}"
-            )
-        return type(name, (), obj)
-    return obj
-
-
-@contextmanager
-def temp_path_additions(path: Optional[Union[str, List[str]]]) -> Generator:
-    """A context manager that temporarily adds ``path`` to sys.path.
-
-    Parameters
-    ----------
-    path : str or list of str
-        A path or list of paths to add to sys.path
-
-    Yields
-    -------
-    sys_path : list of str
-        The current sys.path for the context.
-    """
-    if isinstance(path, (str, Path)):
-        path = [path]
-    path = [os.fspath(p) for p in path] if path else []
-    to_add = [p for p in path if p not in sys.path]
-    for p in to_add:
-        sys.path.insert(0, p)
-    try:
-        yield sys.path
-    finally:
-        for p in to_add:
-            sys.path.remove(p)
-
-
 class PluginManager:
-    """ Core class which manages registration of plugin objects and hook calls.
+    """Core class which manages registration of plugin objects and hook calls.
 
     You can register new hooks by calling :meth:`add_hookspecs(namespace)
     <.PluginManager.add_hookspecs>`. You can register plugin objects (which
@@ -111,6 +48,31 @@ class PluginManager:
 
     For debugging purposes you may call :meth:`.PluginManager.enable_tracing`
     which will subsequently send debug information to the trace helper.
+
+    Parameters
+    ----------
+    project_name : str
+        The name of the host project.
+    discover_entry_point : str, optional
+        The default entry_point group to search when discovering plugins with
+        :meth:`PluginManager.discover`, by default None
+    discover_prefix : str, optional
+        The default module prefix to use when discovering plugins with
+        :meth:`PluginManager.discover`, by default None
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        from napari-plugin-engine import PluginManager
+        import my_hookspecs
+
+        plugin_manager = PluginManager('my_project')
+        plugin_manager.add_hookspecs(my_hookspecs)
+        plugin_manager.discover(entry_point='app.plugin', prefix='app_')
+
+        # hooks now live plugin_manager.hook
     """
 
     def __init__(
@@ -385,7 +347,7 @@ class PluginManager:
         ------
         PluginImportError
             If an exception is raised when importing the module.
-        PluginValidationError
+        PluginRegistrationError
             If an entry_point is declared that is neither a module nor a class.
         PluginRegistrationError
             If an exception is raised during plugin registration.
@@ -406,7 +368,7 @@ class PluginManager:
                 cause=exc,
             )
         if not (inspect.isclass(module) or inspect.ismodule(module)):
-            raise PluginValidationError(
+            raise PluginRegistrationError(
                 f'Plugin "{plugin_name}" declared entry_point "{mod_name}"'
                 ' which is neither a module nor a class.',
                 plugin=module,
@@ -421,18 +383,6 @@ class PluginManager:
             raise PluginRegistrationError(
                 plugin=module, plugin_name=plugin_name, cause=exc
             )
-
-    def _register_dict(
-        self, dct: Dict[str, Callable], name: Optional[str] = None, **kwargs
-    ) -> Optional[str]:
-        mark = HookimplMarker(self.project_name)
-        clean_dct = {
-            key: mark(specname=key, **kwargs)(val)
-            for key, val in dct.items()
-            if inspect.isfunction(val)
-        }
-        namespace = ensure_namespace(clean_dct)
-        return self.register(namespace, name)
 
     def register(
         self, namespace: Any, name: Optional[str] = None
@@ -454,8 +404,10 @@ class PluginManager:
 
         Raises
         ------
+        TypeError
+            If ``namespace`` is a string.
         ValueError
-            if the plugin is already registered.
+            if the plugin ``name`` or ``namespace`` is already registered.
         """
         if isinstance(namespace, str):
             raise TypeError("Plugin objects cannot be strings.")
@@ -495,6 +447,33 @@ class PluginManager:
         self.plugins[plugin_name] = namespace
         return plugin_name
 
+    def _register_dict(
+        self, dct: Dict[str, Callable], name: Optional[str] = None, **kwargs
+    ) -> Optional[str]:
+        """Register a dict as a mapping of method name -> method.
+
+        Parameters
+        ----------
+        dct : Dict[str, Callable]
+            Mapping of method name to method.
+        name : Optional[str], optional
+            The plugin_name to assign to this object, by default None
+
+        Returns
+        -------
+        str or None
+            canonical plugin name, or ``None`` if the name is blocked from
+            registering.
+        """
+        mark = HookimplMarker(self.project_name)
+        clean_dct = {
+            key: mark(specname=key, **kwargs)(val)
+            for key, val in dct.items()
+            if inspect.isfunction(val)
+        }
+        namespace = ensure_namespace(clean_dct)
+        return self.register(namespace, name)
+
     def get_name(self, plugin):
         """ Return name for registered plugin or ``None`` if not registered. """
         for name, val in self.plugins.items():
@@ -502,8 +481,18 @@ class PluginManager:
                 return name
 
     def unregister(self, name_or_object: Any) -> Optional[Any]:
-        """unregister a plugin object and all its contained hook implementations
-        from internal data structures. """
+        """Unregister a plugin object or ``plugin_name``.
+
+        Parameters
+        ----------
+        name_or_object : str or Any
+            A module/class object or a plugin name (string).
+
+        Returns
+        -------
+        module : Any or None
+            The module object, or None if the ``name_or_object`` was not found.
+        """
 
         plugin_name = None
         if isinstance(name_or_object, str):
@@ -535,8 +524,10 @@ class PluginManager:
         return self.add_hookspecs(namespace)
 
     def add_hookspecs(self, namespace: Any):
-        """ add new hook specifications defined in the given ``namespace``.
-        Functions are recognized if they have been decorated accordingly. """
+        """Add new hook specifications defined in the given ``namespace``.
+
+        Functions are recognized if they have been decorated accordingly.
+        """
         names = []
         for name in dir(namespace):
             method = getattr(namespace, name)
@@ -570,13 +561,13 @@ class PluginManager:
             )
 
     def is_registered(self, obj: Any) -> bool:
-        """ Return ``True`` if the plugin is already registered. """
+        """Return ``True`` if the plugin is already registered."""
         if isinstance(obj, str):
             return obj in self.plugins
         return obj in self._plugin2hookcallers
 
     def is_blocked(self, plugin_name: str) -> bool:
-        """ return ``True`` if the given plugin name is blocked. """
+        """Return ``True`` if the given plugin name is blocked."""
         return plugin_name in self._blocked
 
     def set_blocked(self, plugin_name: str, blocked=True):
@@ -610,24 +601,55 @@ class PluginManager:
 
         Parameters
         ----------
+        plugin : Any
+            If provided, will restrict errors to those that were raised by the
+            ``plugin`` object.
         plugin_name : str
             If provided, will restrict errors to those that were raised by
             ``plugin_name``.
-        error_type : Exception
+        error_type : PluginError
             If provided, will restrict errors to instances of ``error_type``.
         """
         return PluginError.get(
             plugin=plugin, plugin_name=plugin_name, error_type=error_type
         )
 
-    def _verify_hook(self, hook_caller, hookimpl):
+    def _verify_hook(self, hook_caller: HookCaller, hookimpl: HookImpl):
+        """Check validity of a ``hookimpl``
+
+        Parameters
+        ----------
+        hook_caller : HookCaller
+            A :class:`HookCaller` instance.
+        hookimpl : HookImpl
+            A :class:`HookImpl` instance, implementing the hook in
+            ``hook_caller``.
+
+        Raises
+        ------
+        PluginValidationError
+            If hook_caller is historic and the hookimpl is a hookwrapper.
+        PluginValidationError
+            If there are any argument names in the ``hookimpl`` that are not
+            in the ``hook_caller.spec``.
+
+        Warns
+        -----
+        Warning
+            If the hookspec has ``warn_on_impl`` flag (usually a deprecation).
+        """
+        # historic hooks cannot have hookwrappers
         if hook_caller.is_historic() and hookimpl.hookwrapper:
             raise PluginValidationError(
+                hookimpl,
                 f"Plugin {hookimpl.plugin_name!r}\nhook "
                 f"{hook_caller.name!r}\nhistoric incompatible to hookwrapper",
-                plugin=hookimpl.plugin,
-                plugin_name=hookimpl.plugin_name,
             )
+
+        if not hook_caller.spec:
+            return
+
+        # If the hookspec has ``warn_on_impl`` flag show a warning.
         if hook_caller.spec.warn_on_impl:
             warnings.warn_explicit(
                 hook_caller.spec.warn_on_impl,
@@ -636,34 +658,39 @@ class PluginManager:
                 filename=hookimpl.function.__code__.co_filename,
             )
 
-        # positional arg checking
+        # If there are any argument names in the hookimpl that are not
+        # in the hook specification.
         notinspec = set(hookimpl.argnames) - set(hook_caller.spec.argnames)
         if notinspec:
             raise PluginValidationError(
+                hookimpl,
                 f"Plugin {hookimpl.plugin_name!r} for hook {hook_caller.name!r}"
                 f"\nhookimpl definition: {_formatdef(hookimpl.function)}\n"
                 f"Argument(s) {notinspec} are declared in the hookimpl but "
                 "can not be found in the hookspec",
-                plugin=hookimpl.plugin,
-                plugin_name=hookimpl.plugin_name,
             )
 
     def check_pending(self):
-        """ Verify that all hooks which have not been verified against
-        a hook specification are optional, otherwise raise
-        :class:`.PluginValidationError`."""
+        """Make sure all hooks have a specification, or are optional.
+
+        Raises
+        ------
+        PluginValidationError
+            If a hook implementation that was *not* marked as ``optionalhook``
+            has been registered for a non-existent hook specification.
+        """
         for name in self.hook.__dict__:
-            if name[0] != "_":
-                hook = getattr(self.hook, name)
-                if not hook.has_spec():
-                    for hookimpl in hook.get_hookimpls():
-                        if not hookimpl.optionalhook:
-                            raise PluginValidationError(
-                                f"unknown hook {name!r} in "
-                                f"plugin {hookimpl.plugin!r}",
-                                plugin=hookimpl.plugin,
-                                plugin_name=hookimpl.plugin_name,
-                            )
+            if name.startswith("_"):
+                continue
+            hook = getattr(self.hook, name)
+            if not hook.has_spec():
+                for hookimpl in hook.get_hookimpls():
+                    if not hookimpl.optionalhook:
+                        raise PluginValidationError(
+                            hookimpl,
+                            f"unknown hook {name!r} in "
+                            f"plugin {hookimpl.plugin!r}",
+                        )
 
     def get_hookcallers(self, plugin: Any) -> Optional[List[HookCaller]]:
         """ get all hook callers for the specified plugin. """
@@ -792,3 +819,65 @@ def iter_implementations(
 
         # create the HookImpl instance for this method
         yield HookImpl(method, namespace, **hookimpl_opts)
+
+
+def ensure_namespace(obj: Any, name: str = 'orphan') -> Type:
+    """Convert a ``dict`` to an object that provides ``getattr``.
+
+    Parameters
+    ----------
+    obj : Any
+        An object, may be a ``dict``, or a regular namespace object.
+    name : str, optional
+        A name to use for the new namespace, if created.  by default 'orphan'
+
+    Returns
+    -------
+    type
+        A namespace object. If ``obj`` is a ``dict``, creates a new ``type``
+        named ``name``, prepopulated with the key:value pairs from ``obj``.
+        Otherwise, if ``obj`` is not a ``dict``, will return the original
+        ``obj``.
+
+    Raises
+    ------
+    ValueError
+        If ``obj`` is a ``dict`` that contains keys that are not valid
+        `identifiers
+        <https://docs.python.org/3.3/reference/lexical_analysis.html#identifiers>`_.
+    """
+    if isinstance(obj, dict):
+        bad_keys = [str(k) for k in obj.keys() if not str(k).isidentifier()]
+        if bad_keys:
+            raise ValueError(
+                f"dict contained invalid identifiers: {', '.join(bad_keys)}"
+            )
+        return type(name, (), obj)
+    return obj
+
+
+@contextmanager
+def temp_path_additions(path: Optional[Union[str, List[str]]]) -> Generator:
+    """A context manager that temporarily adds ``path`` to sys.path.
+
+    Parameters
+    ----------
+    path : str or list of str
+        A path or list of paths to add to sys.path
+
+    Yields
+    -------
+    sys_path : list of str
+        The current sys.path for the context.
+    """
+    if isinstance(path, (str, Path)):
+        path = [path]
+    path = [os.fspath(p) for p in path] if path else []
+    to_add = [p for p in path if p not in sys.path]
+    for p in to_add:
+        sys.path.insert(0, p)
+    try:
+        yield sys.path
+    finally:
+        for p in to_add:
+            sys.path.remove(p)

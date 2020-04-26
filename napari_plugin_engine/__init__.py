@@ -18,6 +18,7 @@ __all__ = [
     "PluginCallError",
     "PluginError",
     "PluginImportError",
+    "PluginImplementationError",
     "PluginManager",
     "PluginRegistrationError",
     "PluginValidationError",
@@ -31,6 +32,7 @@ from .exceptions import (
     PluginImportError,
     PluginRegistrationError,
     PluginValidationError,
+    PluginImplementationError,
 )
 from .hooks import HookCaller
 from .implementation import HookImpl, HookSpec

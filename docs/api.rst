@@ -8,7 +8,6 @@ API Reference
    :nosignatures:
 
    PluginManager
-   Plugin
    HookCaller
    HookResult
    HookImpl
@@ -24,12 +23,6 @@ PluginManager
    :members:
    :private-members:
    :exclude-members: _load_and_register
-
-Plugin
-======
-
-.. autoclass:: Plugin
-   :members:
 
 HookCaller
 ==========
@@ -91,33 +84,61 @@ Exceptions
    :nosignatures:
 
    PluginError
-   HookCallError
+   PluginImportError
+   PluginRegistrationError
+   PluginImplementationError
    PluginValidationError
    PluginCallError
+   HookCallError
 
 PluginError
 -----------
 
 .. autoclass:: PluginError
    :members:
+   :show-inheritance:
 
-HookCallError
--------------
+PluginImportError
+-----------------
 
-.. autoclass:: HookCallError
+.. autoclass:: PluginImportError
    :members:
+   :show-inheritance:
+
+PluginRegistrationError
+------------------------
+
+.. autoclass:: PluginRegistrationError
+   :members:
+   :show-inheritance:
+
+PluginImplementationError
+-------------------------
+
+.. autoclass:: PluginImplementationError
+   :members:
+   :show-inheritance:
 
 PluginValidationError
 ---------------------
 
 .. autoclass:: PluginValidationError
    :members:
+   :show-inheritance:
 
 PluginCallError
 ---------------
 
 .. autoclass:: PluginCallError
    :members:
+   :show-inheritance:
+
+HookCallError
+-------------
+
+.. autoclass:: HookCallError
+   :members:
+   :show-inheritance:
 
 Extra Functions
 ===============

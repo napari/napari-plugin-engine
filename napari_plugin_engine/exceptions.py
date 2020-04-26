@@ -144,36 +144,28 @@ class PluginError(Exception):
         return (self.__class__, self, self.__traceback__)
 
 
+class HookCallError(PluginError):
+    """If a hook is called incorrectly.
+
+    Usually this results when a HookCaller is called without the appropriate
+    arguments.
+    """
+
+
 class PluginImportError(PluginError, ImportError):
-    pass
+    """Plugin module is unimportable."""
 
 
 class PluginRegistrationError(PluginError):
-    pass
+    """If an unexpected error occurs during registration."""
 
 
-class HookCallError(PluginError):
-    """ Hook was called wrongly. """
+class PluginImplementationError(PluginError):
+    """Base class for errors pertaining to a specific hook implementation."""
 
-
-class PluginValidationError(PluginError):
-    """ plugin failed validation.
-
-    :param object plugin: the plugin which failed validation,
-        may be a module or an arbitrary object.
-    """
-
-    pass
-
-
-class PluginCallError(PluginError):
-    """Raised when an error is raised when calling a plugin implementation."""
-
-    def __init__(
-        self, hook_implementation, msg=None, cause=None, manager=None
-    ):
-        plugin_name = hook_implementation.plugin_name
+    def __init__(self, hook_implementation, msg=None, cause=None):
         plugin = hook_implementation.plugin
+        plugin_name = hook_implementation.plugin_name
         specname = hook_implementation.specname
 
         if not msg:
@@ -181,4 +173,14 @@ class PluginCallError(PluginError):
             if cause:
                 msg += f": {str(cause)}"
 
-        super().__init__(msg, plugin=plugin, cause=cause, manager=manager)
+        super().__init__(
+            msg, plugin=plugin, plugin_name=plugin_name, cause=cause,
+        )
+
+
+class PluginValidationError(PluginImplementationError):
+    """When a plugin implementation fails validation."""
+
+
+class PluginCallError(PluginImplementationError):
+    """Raised when an error is raised when calling a plugin implementation."""

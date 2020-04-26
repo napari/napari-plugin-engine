@@ -1,5 +1,4 @@
 import os
-import sys
 
 import pytest
 
@@ -348,7 +347,7 @@ def test_getting_errors(invalid_entrypoint_plugin, caplog):
     try:
         raise ValueError('I caused this')
     except ValueError as e:
-        err = PluginValidationError(plugin=mod, plugin_name='invalid', cause=e)
+        err = PluginError(plugin=mod, plugin_name='invalid', cause=e)
     errs = PluginError.get(plugin=mod)
     assert mod in {p.plugin for p in errs}
     errs = PluginError.get(plugin_name='invalid')
