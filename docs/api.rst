@@ -1,6 +1,6 @@
-###########
-napari_plugin_engine API
-###########
+#############
+API Reference
+#############
 
 .. currentmodule:: napari_plugin_engine
 

@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'napari-plugin-engine'
 author = 'Holger Krekel & Talley Lambert'
 master_doc = 'index'
+html_show_sourcelink = False
 
 # -- General configuration ---------------------------------------------------
 

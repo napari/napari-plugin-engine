@@ -8,11 +8,15 @@ body {
 }
 
 a {
-  color: darkcyan;
+  color: #0088e2;
 }
 
 a:visited {
-  color: #00a6a6;
+  color: #4290c3;
+}
+
+.rst-content a {
+  font-weight: 400
 }
 
 a.icon-home {
