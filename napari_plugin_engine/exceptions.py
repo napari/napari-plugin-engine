@@ -20,7 +20,7 @@ class PluginError(Exception):
     namespace : Optional[Any], optional
         The python object that caused the error, by default None
     cause : Exception, optional
-        Exception that caused the error. Same as ``raise * from``. 
+        Exception that caused the error. Same as ``raise * from``.
         by default None
     """
 
