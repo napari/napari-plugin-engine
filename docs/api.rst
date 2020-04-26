@@ -5,7 +5,6 @@ naplugi API
 .. currentmodule:: naplugi
 
 .. autosummary::
-   :toctree:
    :nosignatures:
 
    PluginManager
@@ -89,7 +88,6 @@ Exceptions
 ==========
 
 .. autosummary::
-   :toctree:
    :nosignatures:
 
    PluginError

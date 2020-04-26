@@ -39,6 +39,7 @@ extensions = [
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
+pygments_style = 'paraiso-dark'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -58,7 +59,8 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 # this is for "press" theme
-# html_css_files = ['css/custom.css']
+# html_css_files = ['css/press.css']
+html_css_files = ['css/rtd.css']
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),

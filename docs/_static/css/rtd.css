@@ -1,0 +1,149 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Roboto:wght@100;300;400;700&display=swap");
+
+body {
+  font-family: "Roboto", "Lato", "proxima-nova", "Helvetica Neue", Arial,
+    sans-serif !important;
+  font-weight: 300;
+  color: #404040;
+}
+
+a {
+  color: darkcyan;
+}
+
+a:visited {
+  color: #00a6a6;
+}
+
+a.icon-home {
+  color: white;
+}
+
+.wy-nav-content-wrap {
+  background: white;
+}
+
+pre,
+code samp {
+  font-family: "IBM Plex Mono", "InconsolataRegular", "Inconsolata",
+    "RobotoMonoRegular", "Roboto Mono", monospace !important;
+  font-size: 1em;
+}
+
+code,
+.rst-content tt,
+.rst-content code {
+  border-radius: 3px;
+}
+
+h1,
+h2,
+.rst-content .toctree-wrapper p.caption,
+h3,
+h4,
+h5,
+h6,
+legend {
+  margin-top: 0;
+  font-weight: 400;
+  font-family: "Roboto", "Georgia", Arial, sans-serif;
+}
+
+.rst-content pre.literal-block,
+.rst-content div[class^="highlight"] {
+  border-radius: 3px;
+}
+
+.rst-content dl:not(.docutils) dt {
+  background-color: lightcyan;
+  border-color: #c8b4da;
+}
+
+.rst-content dl:not(.docutils) dt:first-child {
+  margin-top: 0;
+  padding-left: 4rem;
+  padding-right: 100px;
+}
+
+.rst-content dl:not(.docutils) .property {
+  display: inline-block;
+  padding-right: 8px;
+  position: absolute;
+  left: 0.5rem;
+  text-transform: uppercase;
+  font-style: normal;
+  color: darkcyan;
+}
+
+.rst-content dl.py.data .property {
+  display: inline-block;
+  padding-right: 8px;
+  position: inherit;
+  text-transform: none;
+}
+
+.class .method dt {
+  padding-left: 0.5rem;
+}
+
+.rst-content dl.method dt:first-child {
+  margin-top: 0;
+  padding-left: 0.5rem;
+}
+
+.rst-content dl.method em.property {
+  display: inline-block;
+  position: inherit;
+  margin-right: 0.5rem;
+  left: 0.5rem;
+  font-style: normal;
+  text-transform: uppercase;
+  color: darkcyan;
+}
+
+.function dt a,
+.attribute dt a,
+.class .attribute dt a,
+.class dt a {
+  position: absolute;
+  right: 15px;
+  padding-right: 0;
+  top: 50%;
+  -webkit-transform: perspective(1px) translateY(-50%);
+  transform: perspective(1px) translateY(-50%);
+}
+
+.function .viewcode-link,
+.attribute .viewcode-link,
+.class .viewcode-link {
+  font-size: 0.8rem;
+  color: #979797;
+  letter-spacing: 0;
+  line-height: 1.5rem;
+  font-weight: 300;
+  text-transform: uppercase;
+  padding-right: 15px;
+}
+
+.wy-nav-content {
+  background: white;
+}
+
+.wy-side-nav-search input[type="text"] {
+  border-radius: 5px;
+}
+
+span.sig-paren {
+  font-weight: 400;
+}
+
+em.sig-param {
+  font-size: 0.85rem;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.wy-side-nav-search,
+.wy-nav-top {
+  background-color: darkcyan;
+}
