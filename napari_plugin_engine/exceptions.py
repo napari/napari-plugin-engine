@@ -37,7 +37,8 @@ class PluginError(Exception):
         self.plugin = plugin
         self.plugin_name = plugin_name
         if not message:
-            message = f'Error in plugin "{plugin}"'
+            name = plugin_name or getattr(plugin, '__name__', str(id(plugin)))
+            message = f'Error in plugin "{name}"'
             if cause:
                 message += f': {cause}'
         super().__init__(message)
@@ -99,6 +100,23 @@ class PluginError(Exception):
             errors.append(error)
         return errors
 
+    def format(self, package_info: bool = True):
+        msg = f'PluginError: {self}\n'
+        if self.__cause__:
+            cause = str(self.__cause__).replace("\n", "\n" + " " * 13)
+            msg += f'  Cause was: {cause}'
+
+        if package_info and self.plugin:
+            meta = standard_meta(self.plugin)
+            meta.pop('license', None)
+            meta.pop('summary', None)
+            if meta:
+                msg += "\n" + "\n".join(
+                    [f'{k: >11}: {v}' for k, v in meta.items() if v]
+                )
+        msg += '\n'
+        return msg
+
     def log(
         self,
         package_info: bool = True,
@@ -119,21 +137,7 @@ class PluginError(Exception):
         if not isinstance(logger, logging.Logger):
             logger = logging.getLogger(logger)
 
-        msg = f'PluginError: {self}\n'
-        if self.__cause__:
-            cause = str(self.__cause__).replace("\n", "\n" + " " * 13)
-            msg += f'  Cause was: {cause}'
-
-        if package_info and self.plugin:
-            meta = standard_meta(self.plugin)
-            meta.pop('license', None)
-            meta.pop('summary', None)
-            if meta:
-                msg += "\n" + "\n".join(
-                    [f'{k: >11}: {v}' for k, v in meta.items() if v]
-                )
-        msg += '\n'
-        logger.log(level, msg)
+        logger.log(level, self.format(package_info=package_info))
 
     def info(self) -> ExcInfoTuple:
         """Return info as would be returned from sys.exc_info()."""

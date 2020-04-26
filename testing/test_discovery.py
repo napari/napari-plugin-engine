@@ -1,8 +1,13 @@
 import os
+import sys
 
 import pytest
 
-from napari_plugin_engine import PluginImportError, PluginValidationError
+from napari_plugin_engine import (
+    PluginImportError,
+    PluginValidationError,
+    PluginError,
+)
 from napari_plugin_engine.manager import temp_path_additions
 from napari_plugin_engine.dist import standard_meta, get_version
 
@@ -87,6 +92,7 @@ def invalid_entrypoint_plugin(tmp_path):
         "Home-Page: https://www.example.com\n"
         "Requires-Python: >=3.6\n"
     )
+    return tmp_path
 
 
 @pytest.fixture
@@ -335,9 +341,22 @@ def test_discovery_all_together(full_plugin_manager):
     assert 'good_entry' in full_plugin_manager.plugins.keys()
 
 
-def test_exception_logging(full_plugin_manager):
-    error = full_plugin_manager.get_errors(plugin_name='invalid')[0]
-    print(error.plugin)
+def test_getting_errors(invalid_entrypoint_plugin, caplog):
+    with temp_path_additions(invalid_entrypoint_plugin):
+        import invalid_entrypoint_plugin as mod
+
+    try:
+        raise ValueError('I caused this')
+    except ValueError as e:
+        err = PluginValidationError(plugin=mod, plugin_name='invalid', cause=e)
+    errs = PluginError.get(plugin=mod)
+    assert mod in {p.plugin for p in errs}
+    errs = PluginError.get(plugin_name='invalid')
+    assert 'invalid' in {p.plugin_name for p in errs}
+
+    assert 'I caused this' in err.format()
+    err.log()
+    assert ' Error in plugin "invalid"' in caplog.text
 
 
 @pytest.mark.parametrize('blocked', ['ALL', 'ENTRYPOINT', 'PREFIX'])
