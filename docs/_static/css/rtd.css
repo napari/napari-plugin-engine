@@ -19,6 +19,19 @@ a.icon-home {
   color: white;
 }
 
+a.icon-home::before {
+  content: "\f12e";
+}
+
+.wy-menu-vertical a {
+  color: #d9d9d9;
+}
+
+.wy-menu-vertical header,
+.wy-menu-vertical p.caption {
+  color: #00a9a9;
+}
+
 .wy-nav-content-wrap {
   background: white;
 }
