@@ -1,10 +1,10 @@
-import pytest
 import os
-from napari_plugin_engine import (
-    PluginImportError,
-    PluginValidationError,
-)
+
+import pytest
+
+from napari_plugin_engine import PluginImportError, PluginValidationError
 from napari_plugin_engine.manager import temp_path_additions
+from napari_plugin_engine.dist import standard_meta, get_version
 
 GOOD_PLUGIN = """
 from napari_plugin_engine import HookimplMarker
@@ -99,6 +99,29 @@ def app_broken_plugin(tmp_path):
     (tmp_path / "app_broken_plugin.py").write_text('raise ValueError("broke")')
 
 
+@pytest.fixture
+def full_plugin_manager(
+    tmp_path,
+    add_specification,
+    test_plugin_manager,
+    good_entrypoint_plugin,
+    invalid_entrypoint_plugin,
+    app_good_plugin,
+    app_invalid_plugin,
+    double_convention_plugin,
+):
+    @add_specification
+    def test_specification(arg1, arg2):
+        ...
+
+    cnt, err = test_plugin_manager.discover(
+        tmp_path, entry_point='app.plugin', prefix='app_'
+    )
+    assert cnt == 3
+    assert len(err) == 2
+    return test_plugin_manager
+
+
 def test_plugin_meta(
     tmp_path,
     add_specification,
@@ -120,15 +143,13 @@ def test_plugin_meta(
         'app_good_plugin': '',
     }
     for name, plug in test_plugin_manager.plugins.items():
-        assert f'"{name}"' in repr(plug)
-        assert versions[name] == plug.version
+        assert versions[name] == get_version(plug)
         if name == 'app_good_plugin':
             # this one doesn't have any metadata.. but it will have plugin_name
-            meta = plug.standard_meta
-            meta.pop('plugin_name')
+            meta = standard_meta(plug)
             assert not any(meta.values())
         else:
-            assert plug.version == plug.standard_meta.get('version')
+            assert get_version(plug) == standard_meta(plug).get('version')
 
 
 @pytest.mark.parametrize(
@@ -210,8 +231,8 @@ def test_plugin_discovery_by_prefix(
     # but it wasn't added to the plugin manager
     assert 'app_invalid_plugin' not in test_plugin_manager.plugins.keys()
     # However an error should have been logged for the invalid plugin
-    assert not test_plugin_manager.get_errors('app_good_plugin')
-    errs = test_plugin_manager.get_errors('app_invalid_plugin')
+    assert not test_plugin_manager.get_errors(plugin_name='app_good_plugin')
+    errs = test_plugin_manager.get_errors(plugin_name='app_invalid_plugin')
     assert errs
     assert isinstance(errs[0], PluginValidationError)
     # and it should now be blocked
@@ -267,8 +288,8 @@ def test_plugin_discovery_by_entry_point(
     # but it wasn't added to the plugin manager
     assert 'invalid' not in test_plugin_manager.plugins.keys()
     # However an error should have been logged for the invalid plugin
-    assert not test_plugin_manager.get_errors('good_entry')
-    errs = test_plugin_manager.get_errors('invalid')
+    assert not test_plugin_manager.get_errors(plugin_name='good_entry')
+    errs = test_plugin_manager.get_errors(plugin_name='invalid')
     assert errs
     assert isinstance(errs[0], PluginValidationError)
     # and it should now be blocked
@@ -305,32 +326,18 @@ def test_lazy_autodiscovery(
     assert test_plugin_manager.hook._needs_discovery is False
 
 
-def test_discovery_all_together(
-    tmp_path,
-    add_specification,
-    test_plugin_manager,
-    good_entrypoint_plugin,
-    invalid_entrypoint_plugin,
-    app_good_plugin,
-    app_invalid_plugin,
-    double_convention_plugin,
-):
-    @add_specification
-    def test_specification(arg1, arg2):
-        ...
-
-    hook_caller = test_plugin_manager.hook.test_specification
-    cnt, err = test_plugin_manager.discover(
-        tmp_path, entry_point='app.plugin', prefix='app_'
-    )
-    assert cnt == 3
-    assert len(err) == 2
-
+def test_discovery_all_together(full_plugin_manager):
+    hook_caller = full_plugin_manager.hook.test_specification
     assert len(hook_caller.get_hookimpls()) == 3
-    assert len(test_plugin_manager.plugins) == 3
-    assert 'double' in test_plugin_manager.plugins.keys()
-    assert 'app_good_plugin' in test_plugin_manager.plugins.keys()
-    assert 'good_entry' in test_plugin_manager.plugins.keys()
+    assert len(full_plugin_manager.plugins) == 3
+    assert 'double' in full_plugin_manager.plugins.keys()
+    assert 'app_good_plugin' in full_plugin_manager.plugins.keys()
+    assert 'good_entry' in full_plugin_manager.plugins.keys()
+
+
+def test_exception_logging(full_plugin_manager):
+    error = full_plugin_manager.get_errors(plugin_name='invalid')[0]
+    print(error.plugin)
 
 
 @pytest.mark.parametrize('blocked', ['ALL', 'ENTRYPOINT', 'PREFIX'])

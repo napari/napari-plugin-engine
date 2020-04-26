@@ -48,7 +48,7 @@ def test_plugin_getattr_raises_errors():
     pm = PluginManager(hookspec.project_name)
     # register() would raise an error
     pm.register(module, "donttouch")
-    assert pm.plugins.get("donttouch").object is module
+    assert pm.plugins.get("donttouch") is module
 
 
 def test_warning_on_call_vs_hookspec_arg_mismatch():

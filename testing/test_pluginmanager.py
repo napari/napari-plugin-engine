@@ -9,7 +9,7 @@ from napari_plugin_engine import (
     HookimplMarker,
     HookspecMarker,
 )
-from napari_plugin_engine.manager import importlib_metadata
+from napari_plugin_engine.dist import importlib_metadata
 
 
 hookspec = HookspecMarker("example")
@@ -35,11 +35,10 @@ def test_pm(pm):
     pm.register(a1)
     assert pm.is_registered(a1)
     pm.register(a2, "hello")
+    assert pm.is_registered(a1)
     assert pm.is_registered(a2)
-    assert pm.get_plugin_for_module(a1)
-    assert pm.get_plugin_for_module(a2)
-    assert pm.plugins.get("hello").object == a2
-    assert pm.unregister(module=a1).object == a1
+    assert pm.plugins.get("hello") == a2
+    assert pm.unregister(a1) == a1
     assert not pm.is_registered(a1)
 
 
@@ -63,7 +62,7 @@ def test_register_dynamic_attr(he_pm):
     a = A()
     pname = he_pm.register(a)
     assert he_pm.plugins.get(pname)
-    assert not he_pm.plugins.get(pname)._hookcallers
+    assert not he_pm.get_hookcallers(a)
 
 
 def test_pm_name(pm):
@@ -73,14 +72,12 @@ def test_pm_name(pm):
     a1 = A()
     name = pm.register(a1, name="hello")
     assert name == "hello"
-    pm.unregister(module=a1)
-    assert pm.get_plugin_for_module(a1) is None
+    pm.unregister(a1)
     assert not pm.is_registered(a1)
     assert not pm.plugins
     name2 = pm.register(a1, name="hello")
     assert name2 == name
-    pm.unregister(plugin_name="hello")
-    assert pm.get_plugin_for_module(a1) is None
+    pm.unregister("hello")
     assert not pm.is_registered(a1)
     assert not pm.plugins
 
@@ -101,7 +98,7 @@ def test_set_blocked(pm):
     assert pm.is_blocked("somename")
     assert not pm.register(A(), "somename")
     with pytest.warns(UserWarning):
-        pm.unregister(plugin_name="somename")
+        pm.unregister("somename")
     assert pm.is_blocked("somename")
 
 
@@ -116,7 +113,7 @@ def test_register_mismatch_method(he_pm):
     he_pm.register(plugin)
     with pytest.raises(PluginValidationError) as excinfo:
         he_pm.check_pending()
-    assert excinfo.value.plugin.object is plugin
+    assert excinfo.value.plugin is plugin
 
 
 def test_register_mismatch_arg(he_pm):
@@ -129,7 +126,7 @@ def test_register_mismatch_arg(he_pm):
 
     with pytest.raises(PluginValidationError) as excinfo:
         he_pm.register(plugin)
-    assert excinfo.value.plugin_name == str(id(plugin))
+    assert excinfo.value.plugin == plugin
 
 
 def test_register(pm):
@@ -138,16 +135,15 @@ def test_register(pm):
 
     my = MyPlugin()
     myname = pm.register(my)
-    assert pm.get_plugin_for_module(my)
+    assert pm.is_registered(my)
     my2 = MyPlugin()
     my2name = pm.register(my2)
     assert set([myname, my2name]).issubset(set(pm.plugins))
 
     assert pm.is_registered(my)
     assert pm.is_registered(my2)
-    pm.unregister(module=my)
+    pm.unregister(my)
     assert not pm.is_registered(my)
-    assert not pm.get_plugin_for_module(my)
 
 
 def test_register_dict(he_pm):
@@ -176,7 +172,7 @@ def test_register_unknown_hooks(pm):
     pm.add_hookspecs(Hooks)
     # assert not pm._unverified_hooks
     assert pm.hook.he_method1(arg=1) == [2]
-    assert len(pm.plugins.get(pname)._hookcallers) == 1
+    assert len(pm.get_hookcallers(pm.plugins.get(pname))) == 1
 
 
 def test_register_historic(pm):
@@ -390,7 +386,7 @@ def test_call_with_too_few_args(pm):
 #     assert out == [2]
 #     out[:] = []
 
-#     pm.unregister(module=plugin1)
+#     pm.unregister(plugin1)
 #     hc(arg=2)
 #     assert out == []
 #     out[:] = []
@@ -459,7 +455,7 @@ def test_load_setuptools_instantiation(monkeypatch, pm):
     assert num == 1
     plugin = pm.plugins.get("myname")
     # TODO: do we want to support this?
-    assert plugin.object.x == 42
+    assert plugin.x == 42
 
     num, errors = pm.load_entrypoints("hello")
     assert num == 0  # no plugin loaded by this call

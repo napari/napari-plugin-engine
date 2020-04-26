@@ -1,12 +1,12 @@
 import importlib
 import inspect
 import os
-from pathlib import Path
 import pkgutil
 import sys
 import warnings
 from contextlib import contextmanager
 from logging import getLogger
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -31,12 +31,7 @@ from .exceptions import (
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImpl
 from .markers import HookimplMarker, HookspecMarker
-from .plugin import Plugin, module_to_dist
-
-if sys.version_info >= (3, 8):
-    from importlib import metadata as importlib_metadata
-else:
-    import importlib_metadata
+from .dist import importlib_metadata, _top_level_module_to_dist
 
 
 logger = getLogger(__name__)
@@ -129,7 +124,10 @@ class PluginManager:
         self.discover_entry_point = discover_entry_point
         self.discover_prefix = discover_prefix
         # mapping of name -> Plugin object
-        self.plugins: Dict[str, Plugin] = {}
+        self.plugins: Dict[str, Any] = {}
+        # mapping of Plugin object -> HookCaller
+        self._plugin2hookcallers: Dict[Any, List[HookCaller]] = {}
+
         self._blocked: Set[str] = set()
 
         self.trace = _tracing.TagTracer().get("pluginmanage")
@@ -346,7 +344,7 @@ class PluginManager:
         for finder, mod_name, ispkg in pkgutil.iter_modules():
             if not mod_name.startswith(prefix):
                 continue
-            dist = module_to_dist().get(mod_name)
+            dist = _top_level_module_to_dist().get(mod_name)
             name = dist.metadata.get("name") if dist else mod_name
             if self.is_registered(name) or self.is_blocked(name):
                 continue
@@ -405,15 +403,14 @@ class PluginManager:
             raise PluginImportError(
                 f'Error while importing module {mod_name}',
                 plugin_name=plugin_name,
-                manager=self,
                 cause=exc,
             )
         if not (inspect.isclass(module) or inspect.ismodule(module)):
             raise PluginValidationError(
                 f'Plugin "{plugin_name}" declared entry_point "{mod_name}"'
                 ' which is neither a module nor a class.',
+                plugin=module,
                 plugin_name=plugin_name,
-                manager=self,
             )
 
         try:
@@ -422,7 +419,7 @@ class PluginManager:
             raise
         except Exception as exc:
             raise PluginRegistrationError(
-                plugin_name=plugin_name, manager=self, cause=exc,
+                plugin=module, plugin_name=plugin_name, cause=exc
             )
 
     def _register_dict(
@@ -460,10 +457,13 @@ class PluginManager:
         ValueError
             if the plugin is already registered.
         """
+        if isinstance(namespace, str):
+            raise TypeError("Plugin objects cannot be strings.")
+
         if isinstance(namespace, dict):
             return self._register_dict(namespace, name)
 
-        plugin_name = name or Plugin.get_canonical_name(namespace)
+        plugin_name = name or get_canonical_name(namespace)
 
         if self.is_blocked(plugin_name):
             return None
@@ -473,8 +473,9 @@ class PluginManager:
         if self.is_registered(namespace):
             raise ValueError(f"Plugin module already registered: {namespace}")
 
-        _plugin = Plugin(namespace, plugin_name)
-        for hookimpl in _plugin.iter_implementations(self.project_name):
+        hookcallers = []
+        for hookimpl in iter_implementations(namespace, self.project_name):
+            hookimpl.plugin_name = plugin_name
             hook_caller = getattr(self.hook, hookimpl.specname, None)
             # if we don't yet have a hookcaller by this name, create one.
             if hook_caller is None:
@@ -488,40 +489,38 @@ class PluginManager:
             # Finally, add the hookimpl to the hook_caller and the hook
             # caller to the list of callers for this plugin.
             hook_caller._add_hookimpl(hookimpl)
-            _plugin._hookcallers.append(hook_caller)
+            hookcallers.append(hook_caller)
 
-        self.plugins[plugin_name] = _plugin
+        self._plugin2hookcallers[namespace] = hookcallers
+        self.plugins[plugin_name] = namespace
         return plugin_name
 
-    def unregister(
-        self, *, plugin_name: str = '', module: Any = None,
-    ) -> Optional[Plugin]:
+    def get_name(self, plugin):
+        """ Return name for registered plugin or ``None`` if not registered. """
+        for name, val in self.plugins.items():
+            if plugin == val:
+                return name
+
+    def unregister(self, name_or_object: Any) -> Optional[Any]:
         """unregister a plugin object and all its contained hook implementations
         from internal data structures. """
 
-        if module is not None:
-            if plugin_name:
-                warnings.warn(
-                    'Both plugin_name and module provided '
-                    'to unregister.  Will use module'
-                )
-            plugin = self.get_plugin_for_module(module)
-            if not plugin:
-                warnings.warn(f'No plugins registered for module {module}')
-                return None
-            plugin = self.plugins.pop(plugin.name)
-        elif plugin_name:
-            if plugin_name not in self.plugins:
-                warnings.warn(
-                    f'No plugins registered under the name {plugin_name}'
-                )
-                return None
+        plugin_name = None
+        if isinstance(name_or_object, str):
+            plugin_name = name_or_object
+        else:
+            plugin_name = self.get_name(name_or_object)
+
+        if plugin_name in self.plugins:
             plugin = self.plugins.pop(plugin_name)
         else:
-            raise ValueError("One of plugin_name or module must be provided")
+            warnings.warn(
+                f'No plugins registered under the name {name_or_object}'
+            )
+            return None
 
-        for hook_caller in plugin._hookcallers:
-            hook_caller._remove_plugin(plugin.object)
+        for hookcaller in self._plugin2hookcallers.pop(plugin, []):
+            hookcaller._remove_plugin(plugin)
 
         return plugin
 
@@ -570,14 +569,11 @@ class PluginManager:
                 f"did not find any {self.project_name!r} hooks in {namespace!r}"
             )
 
-    def _object_is_registered(self, obj: Any) -> bool:
-        return any(p.object == obj for p in self.plugins.values())
-
     def is_registered(self, obj: Any) -> bool:
         """ Return ``True`` if the plugin is already registered. """
         if isinstance(obj, str):
             return obj in self.plugins
-        return self._object_is_registered(obj)
+        return obj in self._plugin2hookcallers
 
     def is_blocked(self, plugin_name: str) -> bool:
         """ return ``True`` if the given plugin name is blocked. """
@@ -597,22 +593,18 @@ class PluginManager:
         if blocked:
             self._blocked.add(plugin_name)
             if self.is_registered(plugin_name):
-                self.unregister(plugin_name=plugin_name)
+                self.unregister(plugin_name)
         else:
             if plugin_name in self._blocked:
                 self._blocked.remove(plugin_name)
 
-    def get_plugin_for_module(self, module: Any) -> Optional[Plugin]:
-        try:
-            return next(p for p in self.plugins.values() if p.object == module)
-        except StopIteration:
-            return None
-
     # TODO: fix sentinel
     def get_errors(
         self,
+        *,
+        plugin: Optional[Any] = '_NULL',
         plugin_name: Optional[str] = '_NULL',
-        error_type: Union[Type[BaseException], str] = '_NULL',
+        error_type: Union[Type[PluginError], str] = '_NULL',
     ) -> List[PluginError]:
         """Return a list of PluginErrors associated with this manager.
 
@@ -625,7 +617,7 @@ class PluginManager:
             If provided, will restrict errors to instances of ``error_type``.
         """
         return PluginError.get(
-            manager=self, plugin_name=plugin_name, error_type=error_type
+            plugin=plugin, plugin_name=plugin_name, error_type=error_type
         )
 
     def _verify_hook(self, hook_caller, hookimpl):
@@ -633,8 +625,8 @@ class PluginManager:
             raise PluginValidationError(
                 f"Plugin {hookimpl.plugin_name!r}\nhook "
                 f"{hook_caller.name!r}\nhistoric incompatible to hookwrapper",
+                plugin=hookimpl.plugin,
                 plugin_name=hookimpl.plugin_name,
-                manager=self,
             )
         if hook_caller.spec.warn_on_impl:
             warnings.warn_explicit(
@@ -652,8 +644,8 @@ class PluginManager:
                 f"\nhookimpl definition: {_formatdef(hookimpl.function)}\n"
                 f"Argument(s) {notinspec} are declared in the hookimpl but "
                 "can not be found in the hookspec",
+                plugin=hookimpl.plugin,
                 plugin_name=hookimpl.plugin_name,
-                manager=self,
             )
 
     def check_pending(self):
@@ -669,26 +661,32 @@ class PluginManager:
                             raise PluginValidationError(
                                 f"unknown hook {name!r} in "
                                 f"plugin {hookimpl.plugin!r}",
+                                plugin=hookimpl.plugin,
                                 plugin_name=hookimpl.plugin_name,
-                                manager=self,
                             )
+
+    def get_hookcallers(self, plugin: Any) -> Optional[List[HookCaller]]:
+        """ get all hook callers for the specified plugin. """
+        return self._plugin2hookcallers.get(plugin)
 
     def add_hookcall_monitoring(
         self,
         before: Callable[[str, List[HookImpl], dict], None],
         after: Callable[[HookResult, str, List[HookImpl], dict], None],
     ) -> Callable[[], None]:
-        """ add before/after tracing functions for all hooks
-        and return an undo function which, when called,
-        will remove the added tracers.
+        """Add before/after tracing functions for all hooks.
 
-        ``before(hook_name, hook_impls, kwargs)`` will be called ahead
-        of all hook calls and receive a hookcaller instance, a list
-        of HookImpl instances and the keyword arguments for the hook call.
+        return an undo function which, when called, will remove the added
+        tracers.
 
-        ``after(outcome, hook_name, hook_impls, kwargs)`` receives the
-        same arguments as ``before`` but also a :py:class:`napari_plugin_engine.callers._Result` object
-        which represents the result of the overall hook call.
+        ``before(hook_name, hook_impls, kwargs)`` will be called ahead of all
+        hook calls and receive a hookcaller instance, a list of HookImpl
+        instances and the keyword arguments for the hook call.
+
+        ``after(outcome, hook_name, hook_impls, kwargs)`` receives the same
+        arguments as ``before`` but also a
+        :py:class:`napari_plugin_engine.callers._Result` object which
+        represents the result of the overall hook call.
         """
         oldcall = self._inner_hookexec
 
@@ -710,7 +708,7 @@ class PluginManager:
         return undo
 
     def enable_tracing(self):
-        """ enable tracing of hook calls and return an undo function. """
+        """Enable tracing of hook calls and return an undo function. """
         hooktrace = self.trace.root.get("hook")
 
         def before(hook_name, methods, kwargs):
@@ -760,3 +758,37 @@ class _HookRelay:
         return [
             (k, val) for k, val in vars(self).items() if not k.startswith("_")
         ]
+
+    def values(self) -> List[HookCaller]:
+        """Iterate through hookcallers, removing private attributes."""
+        return [val for k, val in vars(self).items() if not k.startswith("_")]
+
+
+def get_canonical_name(namespace: Any) -> str:
+    """ Return canonical name for a plugin object.
+
+    Note that a plugin may be registered under a different name which was
+    specified by the caller of :meth:`PluginManager.register(plugin, name)
+    <.PluginManager.register>`. To obtain the name of a registered plugin
+    use :meth:`get_name(plugin) <.PluginManager.get_name>` instead.
+    """
+    return getattr(namespace, "__name__", None) or str(id(namespace))
+
+
+def iter_implementations(
+    namespace, project_name: str
+) -> Generator[HookImpl, None, None]:
+    # register matching hook implementations of the plugin
+    for name in dir(namespace):
+        # check all attributes/methods of plugin and look for functions or
+        # methods that have a "{self.project_name}_impl" attribute.
+        method = getattr(namespace, name)
+        if not inspect.isroutine(method):
+            continue
+        # TODO, make "_impl" a HookImpl class attribute
+        hookimpl_opts = getattr(method, project_name + "_impl", None)
+        if not hookimpl_opts:
+            continue
+
+        # create the HookImpl instance for this method
+        yield HookImpl(method, namespace, **hookimpl_opts)

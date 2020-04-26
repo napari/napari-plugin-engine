@@ -1,9 +1,6 @@
 import inspect
 import sys
-from typing import Callable, Optional, TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from .plugin import Plugin  # noqa: F401
+from typing import Callable, Optional, Any
 
 
 class HookImpl:
@@ -12,7 +9,8 @@ class HookImpl:
     def __init__(
         self,
         function: Callable,
-        plugin: Optional['Plugin'] = None,
+        plugin: Optional[Any] = None,
+        plugin_name: Optional[str] = None,
         hookwrapper: bool = False,
         optionalhook: bool = False,
         tryfirst: bool = False,
@@ -22,21 +20,14 @@ class HookImpl:
     ):
         self.function = function
         self.argnames, self.kwargnames = varnames(self.function)
-        self._plugin = plugin
+        self.plugin = plugin
+        self.plugin_name = plugin_name
         self.hookwrapper = hookwrapper
         self.optionalhook = optionalhook
         self.tryfirst = tryfirst
         self.trylast = trylast
         self._specname = specname
         self.enabled = enabled
-
-    @property
-    def plugin(self) -> Any:
-        return self._plugin.object if self._plugin else None
-
-    @property
-    def plugin_name(self) -> str:
-        return self._plugin.name if self._plugin else 'None'
 
     @property
     def opts(self) -> dict:

@@ -250,7 +250,7 @@ def test_hookrelay_registry(pm):
     out = hook.hello(arg=3)
     assert out == [4]
     assert not hasattr(hook, "world")
-    pm.unregister(module=plugin)
+    pm.unregister(plugin)
     assert hook.hello(arg=3) == []
 
 

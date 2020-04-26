@@ -1,50 +1,58 @@
 from types import TracebackType
-from typing import Optional, Union, Type, TYPE_CHECKING, List, Tuple
+from typing import Optional, Union, Type, TYPE_CHECKING, List, Tuple, Any
 import logging
+from .dist import standard_meta
 
 if TYPE_CHECKING:
     from .manager import PluginManager  # noqa: F401
-    from .plugin import Plugin  # noqa: F401
 
 
 ExcInfoTuple = Tuple[Type[Exception], Exception, Optional[TracebackType]]
 
 
 class PluginError(Exception):
+    """Base class for exceptions relating to plugins.
+
+    Parameters
+    ----------
+    message : str, optional
+        An optional error message, by default ''
+    namespace : Optional[Any], optional
+        The python object that caused the error, by default None
+    cause : Exception, optional
+        Exception that caused the error. Same as ``raise * from``. 
+        by default None
+    """
+
     _record: List['PluginError'] = []
 
     def __init__(
         self,
         message: str = '',
         *,
+        plugin: Optional[Any] = None,
         plugin_name: Optional[str] = None,
-        manager: Optional['PluginManager'] = None,
         cause: Optional[BaseException] = None,
     ):
+        self.plugin = plugin
+        self.plugin_name = plugin_name
         if not message:
-            message = f'Error in plugin "{plugin_name}"'
+            message = f'Error in plugin "{plugin}"'
             if cause:
                 message += f': {cause}'
         super().__init__(message)
-        self.manager = manager
-        self.plugin_name = plugin_name
         self.__cause__ = cause
         # store all PluginError instances.  can be retrieved with get()
         PluginError._record.append(self)
-
-    @property
-    def plugin(self) -> Optional['Plugin']:
-        if self.manager and self.plugin_name:
-            return self.manager.plugins.get(self.plugin_name)
-        return None
 
     # TODO: fix sentinel
     @classmethod
     def get(
         cls,
-        manager: Union['PluginManager', None, str] = '_NULL',
+        *,
+        plugin: Optional[Any] = '_NULL',
         plugin_name: Optional[str] = '_NULL',
-        error_type: Union[Type[BaseException], str] = '_NULL',
+        error_type: Union[Type['PluginError'], str] = '_NULL',
     ) -> List['PluginError']:
         """Return errors that have been logged, filtered by parameters.
 
@@ -72,7 +80,7 @@ class PluginError(Exception):
         """
         errors: List['PluginError'] = []
         for error in cls._record:
-            if manager != '_NULL' and error.manager != manager:
+            if plugin != '_NULL' and error.plugin != plugin:
                 continue
             if plugin_name != '_NULL' and error.plugin_name != plugin_name:
                 continue
@@ -117,7 +125,7 @@ class PluginError(Exception):
             msg += f'  Cause was: {cause}'
 
         if package_info and self.plugin:
-            meta = self.plugin.standard_meta
+            meta = standard_meta(self.plugin)
             meta.pop('license', None)
             meta.pop('summary', None)
             if meta:
@@ -161,6 +169,7 @@ class PluginCallError(PluginError):
         self, hook_implementation, msg=None, cause=None, manager=None
     ):
         plugin_name = hook_implementation.plugin_name
+        plugin = hook_implementation.plugin
         specname = hook_implementation.specname
 
         if not msg:
@@ -168,6 +177,4 @@ class PluginCallError(PluginError):
             if cause:
                 msg += f": {str(cause)}"
 
-        super().__init__(
-            msg, plugin_name=plugin_name, cause=cause, manager=manager
-        )
+        super().__init__(msg, plugin=plugin, cause=cause, manager=manager)
