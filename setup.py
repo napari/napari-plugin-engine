@@ -31,8 +31,7 @@ EXTRAS_REQUIRE = {
 def main():
     setup(
         name="naplugi",
-        description="plugin and hook calling mechanisms for python",
-        version="0.0.0",
+        description="napari plugin mechanism, fork of pluggy",
         long_description=long_description,
         long_description_content_type='text/markdown',
         license="MIT license",

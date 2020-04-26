@@ -1,22 +1,9 @@
-from .callers import HookResult
-from .exceptions import (
-    HookCallError,
-    PluginCallError,
-    PluginError,
-    PluginImportError,
-    PluginRegistrationError,
-    PluginValidationError,
-)
-from .hooks import HookCaller
-from .implementation import HookImpl, HookSpec
-from .manager import PluginManager
-from .markers import HookimplMarker, HookspecMarker
-from .plugin import Plugin
-
-__version__ = "0.0.0"
-
-napari_hook_implementation = HookimplMarker("napari")
-napari_hook_specification = HookspecMarker("napari")
+try:
+    from ._version import version as __version__
+except ImportError:
+    # broken installation, we don't even try
+    # unknown only works because we do poor mans version compare
+    __version__ = "unknown"
 
 __all__ = [
     "HookCaller",
@@ -36,3 +23,21 @@ __all__ = [
     "PluginRegistrationError",
     "PluginValidationError",
 ]
+
+from .callers import HookResult
+from .exceptions import (
+    HookCallError,
+    PluginCallError,
+    PluginError,
+    PluginImportError,
+    PluginRegistrationError,
+    PluginValidationError,
+)
+from .hooks import HookCaller
+from .implementation import HookImpl, HookSpec
+from .manager import PluginManager
+from .markers import HookimplMarker, HookspecMarker
+from .plugin import Plugin
+
+napari_hook_implementation = HookimplMarker("napari")
+napari_hook_specification = HookspecMarker("napari")
