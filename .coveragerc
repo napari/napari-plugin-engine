@@ -1,14 +1,14 @@
 [run]
 include =
-  naplugi/*
+  napari_plugin_engine/*
   testing/*
-  */lib/python*/site-packages/naplugi/*
-  */pypy*/site-packages/naplugi/*
-  *\Lib\site-packages\naplugi\*
+  */lib/python*/site-packages/napari_plugin_engine/*
+  */pypy*/site-packages/napari_plugin_engine/*
+  *\Lib\site-packages\napari_plugin_engine\*
 branch = 1
 
 [paths]
-source = naplugi/
-  */lib/python*/site-packages/naplugi/
-  */pypy*/site-packages/naplugi/
-  *\Lib\site-packages\naplugi\
+source = napari_plugin_engine/
+  */lib/python*/site-packages/napari_plugin_engine/
+  */pypy*/site-packages/napari_plugin_engine/
+  *\Lib\site-packages\napari_plugin_engine\

@@ -1,13 +1,13 @@
 import pytest
 import os
-from naplugi import (
+from napari_plugin_engine import (
     PluginImportError,
     PluginValidationError,
 )
-from naplugi.manager import temp_path_additions
+from napari_plugin_engine.manager import temp_path_additions
 
 GOOD_PLUGIN = """
-from naplugi import HookimplMarker
+from napari_plugin_engine import HookimplMarker
 
 @HookimplMarker("test")
 def test_specification(arg1, arg2):
@@ -15,7 +15,7 @@ def test_specification(arg1, arg2):
 """
 
 INVALID_PLUGIN = """
-from naplugi import HookimplMarker
+from napari_plugin_engine import HookimplMarker
 
 @HookimplMarker("test")
 def test_specification(arg1, arg2, arg3):
@@ -333,9 +333,9 @@ def test_discovery_all_together(
     assert 'good_entry' in test_plugin_manager.plugins.keys()
 
 
-@pytest.mark.parametrize('thing', ['', 'ENTRYPOINT_', 'PREFIX_'])
+@pytest.mark.parametrize('blocked', ['ALL', 'ENTRYPOINT', 'PREFIX'])
 def test_env_var_disable(
-    thing,
+    blocked,
     tmp_path,
     add_specification,
     test_plugin_manager,
@@ -347,26 +347,26 @@ def test_env_var_disable(
     def test_specification(arg1, arg2):
         ...
 
-    monkeypatch.setenv(f'NAPLUGI_DISABLE_{thing}PLUGINS', '1')
-    if thing:
-        cnt, err = test_plugin_manager.discover(
-            tmp_path, entry_point='app.plugin', prefix='app_'
-        )
-    else:
+    monkeypatch.setenv(f'DISABLE_{blocked}_PLUGINS', '1')
+    if blocked == 'ALL':
         with pytest.warns(UserWarning):
             cnt, err = test_plugin_manager.discover(
                 tmp_path, entry_point='app.plugin', prefix='app_'
             )
-    assert cnt == (1 if thing else 0)
+    else:
+        cnt, err = test_plugin_manager.discover(
+            tmp_path, entry_point='app.plugin', prefix='app_'
+        )
+    assert cnt == (0 if blocked == 'ALL' else 1)
 
-    if thing == 'ENTRYPOINT':
+    if blocked == 'ENTRYPOINT':
         assert 'app_good_plugin' in test_plugin_manager.plugins.keys()
         assert 'good_entry' not in test_plugin_manager.plugins.keys()
-    elif thing == 'PREFIX':
+    elif blocked == 'PREFIX':
         assert 'app_good_plugin' not in test_plugin_manager.plugins.keys()
         assert 'good_entry' in test_plugin_manager.plugins.keys()
-    elif not thing:
+    elif blocked == 'ALL':
         assert 'app_good_plugin' not in test_plugin_manager.plugins.keys()
         assert 'good_entry' not in test_plugin_manager.plugins.keys()
 
-    monkeypatch.delenv(f'NAPLUGI_DISABLE_{thing}PLUGINS')
+    monkeypatch.delenv(f'DISABLE_{blocked}_PLUGINS')

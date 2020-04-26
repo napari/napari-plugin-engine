@@ -128,7 +128,7 @@ class HookResult:
 def _multicall(
     hook_impls: List[HookImpl], caller_kwargs: dict, firstresult: bool = False,
 ) -> HookResult:
-    """The primary :class:`~naplugi.HookImpl` call loop.
+    """The primary :class:`~napari_plugin_engine.HookImpl` call loop.
 
     Parameters
     ----------

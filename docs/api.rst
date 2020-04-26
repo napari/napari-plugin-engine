@@ -1,8 +1,8 @@
 ###########
-naplugi API
+napari_plugin_engine API
 ###########
 
-.. currentmodule:: naplugi
+.. currentmodule:: napari_plugin_engine
 
 .. autosummary::
    :nosignatures:
@@ -122,14 +122,14 @@ PluginCallError
 Extra Functions
 ===============
 
-.. autofunction:: naplugi.hooks._multicall
+.. autofunction:: napari_plugin_engine.hooks._multicall
 
-.. autofunction:: naplugi.manager.ensure_namespace
+.. autofunction:: napari_plugin_engine.manager.ensure_namespace
 
-.. autofunction:: naplugi.manager.temp_path_additions
+.. autofunction:: napari_plugin_engine.manager.temp_path_additions
 
 
 Types
 =====
 
-.. autodata:: naplugi.hooks.HookExecFunc
+.. autodata:: napari_plugin_engine.hooks.HookExecFunc

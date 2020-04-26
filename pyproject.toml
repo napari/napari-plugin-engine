@@ -7,7 +7,7 @@ requires = [
 ]
 
 [tool.setuptools_scm]
-write_to = "naplugi/_version.py"
+write_to = "napari_plugin_engine/_version.py"
 
 [tool.black]
 target-version = ['py36', 'py37', 'py38']

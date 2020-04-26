@@ -1,4 +1,4 @@
-from naplugi._tracing import TagTracer
+from napari_plugin_engine._tracing import TagTracer
 
 import pytest
 

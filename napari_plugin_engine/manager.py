@@ -160,14 +160,14 @@ class PluginManager:
         caller : HookCaller
             The HookCaller instance that will call the HookImpls.
         methods : List[HookImpl]
-            A list of :class:`~naplugi.HookImpl` objects whos functions will
+            A list of :class:`~napari_plugin_engine.HookImpl` objects whos functions will
             be called during the hook call loop.
         kwargs : dict
             Keyword arguments to pass when calling the ``HookImpl``.
 
         Returns
         -------
-        :class:`~naplugi.HookResult`
+        :class:`~napari_plugin_engine.HookResult`
             The result object produced by the multicall loop.
         """
         return self._inner_hookexec(caller, methods, kwargs)
@@ -218,10 +218,10 @@ class PluginManager:
 
         self.hook._needs_discovery = False
         # allow debugging escape hatch
-        if os.environ.get("NAPLUGI_DISABLE_PLUGINS"):
+        if os.environ.get("DISABLE_ALL_PLUGINS"):
             warnings.warn(
                 'Plugin discovery disabled due to '
-                'environmental variable "NAPLUGI_DISABLE_PLUGINS"'
+                'environmental variable "DISABLE_ALL_PLUGINS"'
             )
             return 0, []
 
@@ -283,7 +283,7 @@ class PluginManager:
             If ``ignore_errors`` is ``True`` and any errors are raised during
             registration.
         """
-        if (not group) or os.environ.get("NAPLUGI_DISABLE_ENTRYPOINT_PLUGINS"):
+        if (not group) or os.environ.get("DISABLE_ENTRYPOINT_PLUGINS"):
             return 0, []
         count = 0
         errors: List[PluginError] = []
@@ -339,7 +339,7 @@ class PluginManager:
             If ``ignore_errors`` is ``True`` and any errors are raised during
             registration.
         """
-        if os.environ.get("NAPLUGI_DISABLE_PREFIX_PLUGINS") or not prefix:
+        if os.environ.get("DISABLE_PREFIX_PLUGINS") or not prefix:
             return 0, []
         count = 0
         errors: List[PluginError] = []
@@ -687,7 +687,7 @@ class PluginManager:
         of HookImpl instances and the keyword arguments for the hook call.
 
         ``after(outcome, hook_name, hook_impls, kwargs)`` receives the
-        same arguments as ``before`` but also a :py:class:`naplugi.callers._Result` object
+        same arguments as ``before`` but also a :py:class:`napari_plugin_engine.callers._Result` object
         which represents the result of the overall hook call.
         """
         oldcall = self._inner_hookexec

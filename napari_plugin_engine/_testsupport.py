@@ -2,7 +2,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from naplugi import (
+from napari_plugin_engine import (
     HookCaller,
     HookImpl,
     HookimplMarker,

@@ -30,7 +30,7 @@ EXTRAS_REQUIRE = {
 
 def main():
     setup(
-        name="naplugi",
+        name="napari-plugin-engine",
         description="napari plugin mechanism, fork of pluggy",
         long_description=long_description,
         long_description_content_type='text/markdown',
@@ -39,13 +39,17 @@ def main():
         author_email="holger@merlinux.eu",
         maintainer="Talley Lambert",
         maintainer_email="talley.lambert@gmail.com",
-        url="https://github.com/napari/naplugi",
+        url="https://github.com/napari/napari-plugin-engine",
         python_requires=">=3.6.*",
         install_requires=['importlib-metadata>=0.12;python_version<"3.8"'],
         extras_require=EXTRAS_REQUIRE,
         classifiers=classifiers,
-        packages=["naplugi"],
-        entry_points={"pytest11": ["naplugi = naplugi._testsupport"]},
+        packages=["napari_plugin_engine"],
+        entry_points={
+            "pytest11": [
+                "napari-plugin-engine = napari_plugin_engine._testsupport"
+            ]
+        },
     )
 
 

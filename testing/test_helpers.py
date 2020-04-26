@@ -1,5 +1,9 @@
-from naplugi.implementation import varnames
-from naplugi.manager import _formatdef, ensure_namespace, temp_path_additions
+from napari_plugin_engine.implementation import varnames
+from napari_plugin_engine.manager import (
+    _formatdef,
+    ensure_namespace,
+    temp_path_additions,
+)
 
 import sys
 import pytest

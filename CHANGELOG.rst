@@ -2,7 +2,7 @@
 Changelog
 =========
 
-forked into naplugi (2020-04-20)
+forked into napari-plugin-engine (2020-04-20)
 ===============================-
 
 

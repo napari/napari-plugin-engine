@@ -6,7 +6,7 @@ Usage Overview
 Create a plugin manager
 =======================
 
-.. currentmodule:: naplugi
+.. currentmodule:: napari_plugin_engine
 
 A :class:`PluginManager` is the main object that registers and organizes
 plugins.  It is instantiated with a ``project_name``:
@@ -42,7 +42,7 @@ decorated as hook specifications for ``'my_project'`` using a
 
    # some_class_or_module.py
 
-   from naplugi import HookspecMarker
+   from napari_plugin_engine import HookspecMarker
 
    my_project_hook_specification = HookspecMarker('my_project')
 
@@ -69,7 +69,7 @@ project name (in this example: ``'my_project'``)
 
    # some_plugin.py
 
-   from naplugi import HookimplMarker
+   from napari_plugin_engine import HookimplMarker
 
    my_project_hook_implementation = HookimplMarker('my_project')
 
@@ -92,7 +92,7 @@ Autodiscover plugins in the environment
 ---------------------------------------
 
 However, it is more often the case that you will want to *discover* plugins in
-your environment.  ``naplugi`` provides two ways to discover plugins via two
+your environment.  ``napari-plugin-engine`` provides two ways to discover plugins via two
 different conventions:
 
 1. `Using package metadata

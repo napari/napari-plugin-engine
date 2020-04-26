@@ -3,13 +3,13 @@
 """
 import pytest
 
-from naplugi import (
+from napari_plugin_engine import (
     PluginValidationError,
     HookCallError,
     HookimplMarker,
     HookspecMarker,
 )
-from naplugi.manager import importlib_metadata
+from napari_plugin_engine.manager import importlib_metadata
 
 
 hookspec = HookspecMarker("example")

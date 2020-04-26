@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'naplugi'
+project = 'napari-plugin-engine'
 author = 'Holger Krekel & Talley Lambert'
 master_doc = 'index'
 
