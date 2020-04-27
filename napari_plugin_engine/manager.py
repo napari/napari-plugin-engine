@@ -624,24 +624,25 @@ class PluginManager:
     # TODO: fix sentinel
     def get_errors(
         self,
-        *,
         plugin: Optional[Any] = '_NULL',
-        plugin_name: Optional[str] = '_NULL',
         error_type: Union[Type[PluginError], str] = '_NULL',
     ) -> List[PluginError]:
-        """Return a list of PluginErrors associated with this manager.
+        """Return a list of PluginErrors associated with ``plugin``.
 
         Parameters
         ----------
         plugin : Any
-            If provided, will restrict errors to those that were raised by the
-            ``plugin`` object.
-        plugin_name : str
             If provided, will restrict errors to those that were raised by
-            ``plugin_name``.
+            ``plugin``.  If a string is provided, it will be interpreted as the
+            name of the plugin, otherwise it is assumed to be the actual plugin
+            object itself.
         error_type : PluginError
             If provided, will restrict errors to instances of ``error_type``.
         """
+        plugin_name = '_NULL'
+        if plugin != '_NULL' and isinstance(plugin, str):
+            plugin_name = plugin
+            plugin = '_NULL'
         return PluginError.get(
             plugin=plugin, plugin_name=plugin_name, error_type=error_type
         )

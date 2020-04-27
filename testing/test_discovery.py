@@ -236,8 +236,8 @@ def test_plugin_discovery_by_prefix(
     # but it wasn't added to the plugin manager
     assert 'app_invalid_plugin' not in test_plugin_manager.plugins.keys()
     # However an error should have been logged for the invalid plugin
-    assert not test_plugin_manager.get_errors(plugin_name='app_good_plugin')
-    errs = test_plugin_manager.get_errors(plugin_name='app_invalid_plugin')
+    assert not test_plugin_manager.get_errors('app_good_plugin')
+    errs = test_plugin_manager.get_errors('app_invalid_plugin')
     assert errs
     assert isinstance(errs[0], PluginValidationError)
     # and it should now be blocked
@@ -293,8 +293,8 @@ def test_plugin_discovery_by_entry_point(
     # but it wasn't added to the plugin manager
     assert 'invalid' not in test_plugin_manager.plugins.keys()
     # However an error should have been logged for the invalid plugin
-    assert not test_plugin_manager.get_errors(plugin_name='good_entry')
-    errs = test_plugin_manager.get_errors(plugin_name='invalid')
+    assert not test_plugin_manager.get_errors('good_entry')
+    errs = test_plugin_manager.get_errors('invalid')
     assert errs
     assert isinstance(errs[0], PluginValidationError)
     # and it should now be blocked
