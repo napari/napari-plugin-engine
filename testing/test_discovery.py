@@ -8,7 +8,7 @@ from napari_plugin_engine import (
     PluginError,
 )
 from napari_plugin_engine.manager import temp_path_additions
-from napari_plugin_engine.dist import standard_meta, get_version
+from napari_plugin_engine.dist import standard_metadata, get_version
 
 GOOD_PLUGIN = """
 from napari_plugin_engine import HookimplMarker
@@ -151,10 +151,10 @@ def test_plugin_meta(
         assert versions[name] == get_version(plug)
         if name == 'app_good_plugin':
             # this one doesn't have any metadata.. but it will have plugin_name
-            meta = standard_meta(plug)
+            meta = standard_metadata(plug)
             assert not any(meta.values())
         else:
-            assert get_version(plug) == standard_meta(plug).get('version')
+            assert get_version(plug) == standard_metadata(plug).get('version')
 
 
 @pytest.mark.parametrize(

@@ -6,6 +6,7 @@ except ImportError:
     __version__ = "unknown"
 
 __all__ = [
+    "get_metadata",
     "HookCaller",
     "HookCallError",
     "HookImpl",
@@ -17,11 +18,12 @@ __all__ = [
     "napari_hook_specification",
     "PluginCallError",
     "PluginError",
-    "PluginImportError",
     "PluginImplementationError",
+    "PluginImportError",
     "PluginManager",
     "PluginRegistrationError",
     "PluginValidationError",
+    "standard_metadata",
 ]
 
 from .callers import HookResult
@@ -38,6 +40,7 @@ from .hooks import HookCaller
 from .implementation import HookImpl, HookSpec
 from .manager import PluginManager
 from .markers import HookimplMarker, HookspecMarker
+from .dist import get_metadata, standard_metadata
 
 napari_hook_implementation = HookimplMarker("napari")
 napari_hook_specification = HookspecMarker("napari")

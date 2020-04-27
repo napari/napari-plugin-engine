@@ -1,7 +1,7 @@
 from types import TracebackType
 from typing import Optional, Union, Type, TYPE_CHECKING, List, Tuple, Any
 import logging
-from .dist import standard_meta
+from .dist import standard_metadata
 
 if TYPE_CHECKING:
     from .manager import PluginManager  # noqa: F401
@@ -107,7 +107,7 @@ class PluginError(Exception):
             msg += f'  Cause was: {cause}'
 
         if package_info and self.plugin:
-            meta = standard_meta(self.plugin)
+            meta = standard_metadata(self.plugin)
             meta.pop('license', None)
             meta.pop('summary', None)
             if meta:

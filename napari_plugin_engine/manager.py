@@ -26,7 +26,7 @@ from .dist import (
     _top_level_module_to_dist,
     get_metadata,
     importlib_metadata,
-    standard_meta,
+    standard_metadata,
 )
 from .exceptions import (
     PluginError,
@@ -639,6 +639,8 @@ class PluginManager:
         error_type : PluginError
             If provided, will restrict errors to instances of ``error_type``.
         """
+        # not using _ensure_plugin because it may not have been successfully
+        # registered
         plugin_name = '_NULL'
         if plugin != '_NULL' and isinstance(plugin, str):
             plugin_name = plugin
@@ -786,8 +788,10 @@ class PluginManager:
 
         return self.add_hookcall_monitoring(before, after)
 
-    def get_metadata(self, plugin: Any, *values):
-        """Return metadata for a given plugin
+    def get_metadata(
+        self, plugin: Any, *values
+    ) -> Optional[Union[str, Dict[str, Optional[str]]]]:
+        """Return metadata values for a given plugin
 
         Parameters
         ----------
@@ -796,18 +800,55 @@ class PluginManager:
             or a non-string object (in which case it is assumed to be a plugin
             module or class).
         *values : str
-            key(s) to lookup in the plugin object distribution metadata.
+            key(s) to lookup in the plugin object distribution metadata.  At
+            least one value must be supplied.
+
+        Raises
+        ------
+        TypeError
+            If no values are supplied.
+        KeyError
+            If the plugin does not exist.
+        """
+        if not values:
+            raise TypeError(
+                'get_metadata() requires at least one positional '
+                'argument: the metadata value(s) to lookup'
+            )
+        # allow other objects to pass through directly to get_metadata
+        if isinstance(plugin, str):
+            plugin = self._ensure_plugin(plugin)
+        return get_metadata(plugin, *values)
+
+    def get_standard_metadata(self, plugin: Any):
+        """Return a standard metadata dict for ``plugin``.
+
+        Parameters
+        ----------
+        plugin : Any
+            A plugin name or any object.  If it is a plugin name, it
+            *must* be a registered plugin.
+
+        Returns
+        -------
+        metadata : dict
+            A  dicts with plugin metadata. The dict is guaranteed to have the
+            following keys: {'plugin_name', 'version', 'summary', 'author',
+            'license', 'package', 'email', 'url'}
 
         Raises
         ------
         KeyError
-            If the plugin does not exist.
+            If ``plugin`` is a string, but is not a registered plugin_name.
         """
-        plugin = self._ensure_plugin(plugin)
-        return get_metadata(plugin, *values)
+        if isinstance(plugin, str):
+            plugin = self._ensure_plugin(plugin)
+        plugin_meta = dict(plugin_name=self.get_name(plugin))
+        plugin_meta.update(standard_metadata(plugin))
+        return plugin_meta
 
     def list_plugin_metadata(self) -> List[Dict[str, Optional[str]]]:
-        """Return a list of metadata dicts for every registered plugin.
+        """Return list of standard metadata dicts for every registered plugin.
 
         Returns
         -------
@@ -816,12 +857,10 @@ class PluginManager:
             guaranteed to have the following keys: {'plugin_name', 'version',
             'summary', 'author', 'license', 'package', 'email', 'url'}
         """
-        meta_list: List[dict] = []
-        for plugin in self._plugin2hookcallers:
-            plugin_meta = dict(plugin_name=self.get_name(plugin))
-            plugin_meta.update(standard_meta(plugin))
-            meta_list.append(plugin_meta)
-        return meta_list
+        return [
+            self.get_standard_metadata(plugin)
+            for plugin in self._plugin2hookcallers
+        ]
 
 
 def _formatdef(func):
