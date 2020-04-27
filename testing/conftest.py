@@ -6,9 +6,9 @@ import pytest
     ids=["spec-is-class", "spec-is-instance"],
 )
 def he_pm(request, pm):
-    from napari_plugin_engine import HookspecMarker
+    from napari_plugin_engine import HookSpecificationMarker
 
-    hookspec = HookspecMarker("example")
+    hookspec = HookSpecificationMarker("example")
 
     class Hooks:
         @hookspec

@@ -2,11 +2,11 @@ import pytest
 from napari_plugin_engine import (
     PluginValidationError,
     HookImplementationMarker,
-    HookspecMarker,
+    HookSpecificationMarker,
 )
 
 
-hookspec = HookspecMarker("example")
+hookspec = HookSpecificationMarker("example")
 hookimpl = HookImplementationMarker("example")
 
 

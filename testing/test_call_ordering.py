@@ -1,12 +1,12 @@
 import pytest
 from napari_plugin_engine import (
     HookImplementationMarker,
-    HookspecMarker,
+    HookSpecificationMarker,
     PluginManager,
 )
 
 dummy_hook_implementation = HookImplementationMarker("dummy")
-dummy_hook_specification = HookspecMarker("dummy")
+dummy_hook_specification = HookSpecificationMarker("dummy")
 
 
 class MySpec:

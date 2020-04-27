@@ -1,14 +1,14 @@
 import pytest
 from napari_plugin_engine import (
     HookCallError,
-    HookspecMarker,
+    HookSpecificationMarker,
     HookImplementationMarker,
     HookImplementation,
 )
 from napari_plugin_engine.callers import _multicall
 
 
-hookspec = HookspecMarker("example")
+hookspec = HookSpecificationMarker("example")
 example_implementation = HookImplementationMarker("example")
 
 

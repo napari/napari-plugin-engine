@@ -3,10 +3,10 @@ import pytest
 from napari_plugin_engine import (
     PluginManager,
     HookImplementationMarker,
-    HookspecMarker,
+    HookSpecificationMarker,
 )
 
-hookspec = HookspecMarker("example")
+hookspec = HookSpecificationMarker("example")
 hookimpl = HookImplementationMarker("example")
 
 

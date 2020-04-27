@@ -36,15 +36,15 @@ function signatures plugins may implement:
 <https://docs.python.org/3/tutorial/classes.html#python-scopes-and-namespaces>`_
 object (such as a class or module) that has some functions that have been
 decorated as hook specifications for ``'my_project'`` using a
-:class:`HookspecMarker` decorator.
+:class:`HookSpecificationMarker` decorator.
 
 .. code-block:: python
 
    # some_class_or_module.py
 
-   from napari_plugin_engine import HookspecMarker
+   from napari_plugin_engine import HookSpecificationMarker
 
-   my_project_hook_specification = HookspecMarker('my_project')
+   my_project_hook_specification = HookSpecificationMarker('my_project')
 
    @my_project_hook_specification
    def do_something(arg1: int, arg2: int): -> int:

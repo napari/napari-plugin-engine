@@ -12,7 +12,7 @@ API Reference
    HookResult
    HookImplementation
    HookSpecification
-   HookspecMarker
+   HookSpecificationMarker
    HookImplementationMarker
 
 
@@ -61,10 +61,10 @@ HookImplementation
 Decorators & Markers
 ====================
 
-HookspecMarker
+HookSpecificationMarker
 --------------
 
-.. autoclass:: HookspecMarker
+.. autoclass:: HookSpecificationMarker
    :members:
    :special-members:
    :exclude-members: __init__, __weakref__

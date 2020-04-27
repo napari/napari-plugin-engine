@@ -36,7 +36,7 @@ from .exceptions import (
 )
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImplementation
-from .markers import HookImplementationMarker, HookspecMarker
+from .markers import HookImplementationMarker, HookSpecificationMarker
 
 logger = getLogger(__name__)
 
@@ -549,7 +549,7 @@ class PluginManager:
         return plugin
 
     def _add_hookspec_dict(self, dct: Dict[str, Callable], **kwargs):
-        mark = HookspecMarker(self.project_name)
+        mark = HookSpecificationMarker(self.project_name)
         clean_dct = {
             key: mark(**kwargs)(val)
             for key, val in dct.items()

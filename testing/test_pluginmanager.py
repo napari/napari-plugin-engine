@@ -7,12 +7,12 @@ from napari_plugin_engine import (
     PluginValidationError,
     HookCallError,
     HookImplementationMarker,
-    HookspecMarker,
+    HookSpecificationMarker,
 )
 from napari_plugin_engine.dist import importlib_metadata
 
 
-hookspec = HookspecMarker("example")
+hookspec = HookSpecificationMarker("example")
 hookimpl = HookImplementationMarker("example")
 
 

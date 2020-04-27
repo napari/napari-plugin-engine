@@ -2,7 +2,7 @@
 from typing import Callable, Optional
 
 
-class HookspecMarker:
+class HookSpecificationMarker:
     """ Decorator helper class for marking functions as hook specifications.
 
     You can instantiate it with a project_name to get a decorator. Calling

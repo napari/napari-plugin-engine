@@ -6,7 +6,7 @@ from napari_plugin_engine import (
     HookCaller,
     HookImplementation,
     HookImplementationMarker,
-    HookspecMarker,
+    HookSpecificationMarker,
     PluginManager,
 )
 
@@ -24,7 +24,7 @@ def add_specification(test_plugin_manager):
     def addspec(function=None, *, firstresult=False, historic=False):
         def wrap(func):
             project = test_plugin_manager.project_name
-            test_hookspec = HookspecMarker(project)
+            test_hookspec = HookSpecificationMarker(project)
             test_hookspec(firstresult=firstresult, historic=historic)(func)
             name = func.__name__
             namespace = type("Hook", (), {name: func})

@@ -13,7 +13,7 @@ __all__ = [
     "HookImplementationMarker",
     "HookResult",
     "HookSpecification",
-    "HookspecMarker",
+    "HookSpecificationMarker",
     "napari_hook_implementation",
     "napari_hook_specification",
     "PluginCallError",
@@ -39,8 +39,8 @@ from .exceptions import (
 from .hooks import HookCaller
 from .implementation import HookImplementation, HookSpecification
 from .manager import PluginManager
-from .markers import HookImplementationMarker, HookspecMarker
+from .markers import HookImplementationMarker, HookSpecificationMarker
 from .dist import get_metadata, standard_metadata
 
 napari_hook_implementation = HookImplementationMarker("napari")
-napari_hook_specification = HookspecMarker("napari")
+napari_hook_specification = HookSpecificationMarker("napari")
