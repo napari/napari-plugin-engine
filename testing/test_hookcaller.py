@@ -5,7 +5,7 @@ from napari_plugin_engine import (
     HookspecMarker,
     PluginValidationError,
     HookImplementation,
-    HookSpec,
+    HookSpecification,
 )
 
 example_hookspec = HookspecMarker("example")
@@ -176,7 +176,7 @@ def test_adding_wrappers_ordering_tryfirst(hook_caller, addmeth):
 
 
 def test_hookspec(pm):
-    class HookSpec:
+    class HookSpecification:
         @example_hookspec()
         def he_myhook1(arg1):
             pass
@@ -189,7 +189,7 @@ def test_hookspec(pm):
         def he_myhook3(arg1):
             pass
 
-    pm.add_hookspecs(HookSpec)
+    pm.add_hookspecs(HookSpecification)
     assert not pm.hook.he_myhook1.spec.firstresult
     assert pm.hook.he_myhook2.spec.firstresult
     assert not pm.hook.he_myhook3.spec.firstresult
@@ -198,17 +198,17 @@ def test_hookspec(pm):
 def test_hookspec_reserved_argnames(pm):
     """Certain argument names are reserved and cannot be used in specs."""
 
-    class HookSpecA:
+    class HookSpecificationA:
         @example_hookspec()
         def he_myhook1(_plugin):
             pass
 
-    class HookSpecB:
+    class HookSpecificationB:
         @example_hookspec()
         def he_myhook1(_skip_impls):
             pass
 
-    for cls in (HookSpecA, HookSpecB):
+    for cls in (HookSpecificationA, HookSpecificationB):
         with pytest.raises(ValueError):
             pm.add_hookspecs(cls)
 
@@ -317,5 +317,5 @@ def test_legacy_specimpl_opt():
     impl = HookImplementation(lambda x: x)
     assert impl.opts
 
-    spec = HookSpec(type("Hook", (), {'x': lambda x: x}), 'x')
+    spec = HookSpecification(type("Hook", (), {'x': lambda x: x}), 'x')
     assert spec.opts

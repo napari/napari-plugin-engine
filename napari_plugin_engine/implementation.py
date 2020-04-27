@@ -64,7 +64,7 @@ class HookImplementation:
         return self._specname or self.function.__name__
 
 
-class HookSpec:
+class HookSpecification:
     """A class to encapsulate hook specifications."""
 
     def __init__(
@@ -106,7 +106,9 @@ class HookSpec:
             if getattr(self, attr)
         ]
         suffix = (' ' + " ".join(truthy)) if truthy else ''
-        return f"<HookSpec {self.name!r} args={self.argnames!r}{suffix}>"
+        return (
+            f"<HookSpecification {self.name!r} args={self.argnames!r}{suffix}>"
+        )
 
 
 # TODO: can this be improved?

@@ -11,7 +11,7 @@ API Reference
    HookCaller
    HookResult
    HookImplementation
-   HookSpec
+   HookSpecification
    HookspecMarker
    HookImplementationMarker
 
@@ -45,10 +45,10 @@ HookResult
    :members:
 
 
-HookSpec
+HookSpecification
 ========
 
-.. autoclass:: HookSpec
+.. autoclass:: HookSpecification
    :members:
 
 HookImplementation

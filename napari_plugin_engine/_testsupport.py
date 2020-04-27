@@ -19,7 +19,7 @@ def test_plugin_manager() -> PluginManager:
 
 @pytest.fixture
 def add_specification(test_plugin_manager):
-    """Return a decorator that adds a HookSpec to test_plugin_manager."""
+    """Return a decorator that adds a HookSpecification to test_plugin_manager."""
 
     def addspec(function=None, *, firstresult=False, historic=False):
         def wrap(func):

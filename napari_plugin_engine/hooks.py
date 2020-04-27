@@ -7,7 +7,7 @@ from typing import Any, Callable, List, Optional, Union
 
 from .callers import HookCallError, HookResult, _multicall
 from .exceptions import PluginCallError
-from .implementation import HookImplementation, HookSpec
+from .implementation import HookImplementation, HookSpecification
 
 HookExecFunc = Callable[
     ['HookCaller', List[HookImplementation], dict], HookResult
@@ -51,7 +51,7 @@ class HookCaller:
     hook specification).
 
     The ``HookCaller`` instance also usually creates and stores a reference to
-    the :class:`HookSpec` instance that encapsulates information about the hook
+    the :class:`HookSpecification` instance that encapsulates information about the hook
     specification, (at ``HookCaller.spec``)
 
     Parameters
@@ -65,11 +65,11 @@ class HookCaller:
         :meth:`PluginManager._hookexec`... which is, in turn, mostly just a
         wrapper around :func:`._multicall`.
     namespace : Any, optional
-        An namespace (such as a module or class) to search during `HookSpec`
+        An namespace (such as a module or class) to search during `HookSpecification`
         creation for functions decorated with ``@hookspec`` named with the
         string ``name``.
     spec_opts : Optional[dict], optional
-        keyword arguments to be passed when creating the :class:`HookSpec`
+        keyword arguments to be passed when creating the :class:`HookSpecification`
         instance at ``self.spec``.
     """
 
@@ -87,7 +87,7 @@ class HookCaller:
         self.argnames = None
         self.kwargnames = None
         self.multicall = _multicall
-        self.spec: Optional[HookSpec] = None
+        self.spec: Optional[HookSpecification] = None
         if namespace is not None:
             assert spec_opts is not None
             self.set_specification(namespace, spec_opts)
@@ -101,7 +101,7 @@ class HookCaller:
 
     def set_specification(self, namespace, spec_opts):
         assert not self.has_spec()
-        self.spec = HookSpec(namespace, self.name, **spec_opts)
+        self.spec = HookSpecification(namespace, self.name, **spec_opts)
         if spec_opts.get("historic"):
             self._call_history = []
 

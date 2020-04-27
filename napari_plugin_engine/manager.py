@@ -568,7 +568,7 @@ class PluginManager:
             method = getattr(namespace, name)
             if not inspect.isroutine(method):
                 continue
-            # TODO: make `_spec` a class attribute of HookSpec
+            # TODO: make `_spec` a class attribute of HookSpecification
             spec_opts = getattr(method, self.project_name + "_spec", None)
             if spec_opts is not None:
                 hook_caller = getattr(self.hook, name, None,)

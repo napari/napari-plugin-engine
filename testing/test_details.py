@@ -100,7 +100,10 @@ def test_repr():
     pm = PluginManager(hookspec.project_name)
     pm.add_hookspecs(Hook)
 
-    assert repr(pm.hook.myhook.spec) == "<HookSpec 'myhook' args=('arg',)>"
+    assert (
+        repr(pm.hook.myhook.spec)
+        == "<HookSpecification 'myhook' args=('arg',)>"
+    )
 
     plugin = Plugin()
     pname = pm.register(plugin)
