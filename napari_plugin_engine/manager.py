@@ -70,7 +70,7 @@ class PluginManager:
 
     .. code-block:: python
 
-        from napari-plugin-engine import PluginManager
+        from napari_plugin_engine import PluginManager
         import my_hookspecs
 
         plugin_manager = PluginManager('my_project')
@@ -90,9 +90,13 @@ class PluginManager:
         self.project_name = project_name
         self.discover_entry_point = discover_entry_point
         self.discover_prefix = discover_prefix
-        # mapping of name -> Plugin object
+        #: dict : mapping of ``plugin_name`` → ``plugin`` (object)
+        #:
+        #: Plugins get added to this dict in :meth:`~PluginManager.register`
         self.plugins: Dict[str, Any] = {}
-        # mapping of Plugin object -> HookCaller
+        #: dict : mapping of ``plugin`` (object) → list of :class:`HookCaller`
+        #:
+        #: :class:`HookCaller` s get added in :meth:`~PluginManager.register`
         self._plugin2hookcallers: Dict[Any, List[HookCaller]] = {}
 
         self._blocked: Set[str] = set()
@@ -143,22 +147,26 @@ class PluginManager:
     def discover(
         self,
         path: Optional[str] = None,
-        entry_point: str = None,
-        prefix: str = None,
+        entry_point: Optional[str] = None,
+        prefix: Optional[str] = None,
         ignore_errors: bool = True,
     ) -> Tuple[int, List[PluginError]]:
-        """Discover modules by both naming convention and entry_points
+        """Discover modules by both naming convention and entry_points.
 
-        1) Using naming convention:
-            plugins installed in the environment that follow a naming
-            convention (e.g. "napari_plugin"), can be discovered using
-            `pkgutil`. This also enables easy discovery on pypi
+        1. `Using naming convention
+           <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-naming-convention>`_:
+           modules installed in the environment that follow a naming convention
+           (e.g. "napari_plugin"), can be discovered using :mod:`pkgutil`. This also
+           enables easy discovery using the PyPI `simple API
+           <https://www.python.org/dev/peps/pep-0503/>`_
 
-        2) Using package metadata:
-            plugins that declare a special key (self.PLUGIN_ENTRYPOINT) in
-            their setup.py `entry_points`.  discovered using `pkg_resources`.
-
-        https://packaging.python.org/guides/creating-and-discovering-plugins/
+        2) `Using package metadata
+           <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata>`_:
+           packages that declare an `entry_point
+           <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
+           in their ``setup.py`` file that matches the ``entry_point`` argument
+           can be discovered using `importlib.metadata
+           <https://docs.python.org/3/library/importlib.metadata.html>`_.
 
         Parameters
         ----------

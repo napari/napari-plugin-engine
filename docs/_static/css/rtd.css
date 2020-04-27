@@ -82,6 +82,11 @@ legend {
   padding-right: 100px;
 }
 
+.rst-content dl.field-list.simple dt:first-child {
+  padding-left: 0.5rem;
+}
+
+
 .rst-content dl:not(.docutils) .property {
   display: inline-block;
   padding-right: 8px;
@@ -163,4 +168,22 @@ em.sig-param {
 .wy-side-nav-search,
 .wy-nav-top {
   background-color: darkcyan;
+}
+
+.wy-table-responsive td code {
+  font-size: 0.75rem;
+}
+
+dl.py.attribute em.property {
+  display: none;
+}
+
+.rst-content dl.py.attribute dt:first-child {
+  padding-left: 0.5rem;
+}
+
+.rst-content dl.py.attribute dt:first-child code.descname::before {
+  content: "ATTR";
+  padding-right: 5px;
+  color: darkcyan;
 }

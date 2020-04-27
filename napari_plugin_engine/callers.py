@@ -29,8 +29,9 @@ class HookResult:
     Parameters
     ----------
     results : List[Tuple[Any, HookImplementation]]
-        A list of (result, HookImplementation) tuples, with the result and HookImplementation
-        object responsible for each result collected during a _multicall loop.
+        A list of (result, HookImplementation) tuples, with the result and
+        HookImplementation object responsible for each result collected during
+        a _multicall loop.
     excinfo : tuple
         The output of sys.exc_info() if raised during the multicall loop.
     firstresult : bool, optional
@@ -38,8 +39,8 @@ class HookResult:
         If True, self._result, and self.implementation will be single values,
         otherwise they will be lists.
     plugin_errors : list
-        A list of any :class:`napari.plugins.exceptions.PluginCallError`
-        instances that were created during the multicall loop.
+        A list of any :class:`PluginCallError` instances that were created
+        during the multicall loop.
     """
 
     def __init__(
