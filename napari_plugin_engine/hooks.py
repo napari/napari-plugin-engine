@@ -217,25 +217,27 @@ class HookCaller:
         of registration, and pluggy does not provide a built-in way to
         rearrange the call order of hook implementations.
 
-        This function accepts a `HookCaller` instance and the desired
+        This function accepts a :class:`HookCaller` instance and the desired
         ``new_order`` of the hook implementations (in the form of list of
-        plugin names, or a list of actual ``HookImplementation`` instances) and reorders
-        the implementations in the hook caller accordingly.
+        plugin names, or a list of actual :class:`HookImplementation`
+        instances) and reorders the implementations in the hook caller
+        accordingly.
 
-        NOTE: hook implementations are actually stored in *two* separate list
-        attributes in the hook caller: ``HookCaller._wrappers`` and
-        ``HookCaller._nonwrappers``, according to whether the corresponding
-        ``HookImplementation`` instance was marked as a wrapper or not.  This method
-        *only* sorts _nonwrappers.
-        For more, see: https://pluggy.readthedocs.io/en/latest/#wrappers
+        .. note::
+
+           Hook implementations are actually stored in *two* separate list
+           attributes in the hook caller: :attr:`HookCaller._wrappers` and
+           :attr:`HookCaller._nonwrappers`, according to whether the
+           corresponding :class:`HookImplementation` instance was marked as a
+           wrapper or not. This method *only* sorts _nonwrappers.
 
         Parameters
         ----------
-        new_order :  list of str or list of ``HookImplementation`` instances
-            The desired CALL ORDER of the hook implementations.  The list
-            does *not* need to include every hook implementation in
-            :meth:`~HookCaller.get_hookimpls`, but those that are not included
-            will be left at the end of the call order.
+        new_order :  list of str or list of :class:`HookImplementation`
+            instances The desired CALL ORDER of the hook implementations.  The
+            list does *not* need to include every hook implementation in
+            :meth:`get_hookimpls`, but those that are not included will be left
+            at the end of the call order.
 
         Raises
         ------
@@ -350,9 +352,11 @@ class HookCaller:
     def _call_plugin(self, plugin_name: str, *args, **kwargs):
         """Call the hook implementation for a specific plugin
 
-        Note: this method is not intended to be called directly. Instead, just
-        call the instance directly, specifing the ``_plugin`` argument.
-        See the ``__call__`` method below.
+        .. note::
+
+           This method is not intended to be called directly. Instead, just
+           call the instance directly, specifing the ``_plugin`` argument.
+           See the :meth:`__call__` method.
 
         Parameters
         ----------
@@ -453,11 +457,13 @@ class HookCaller:
 
         This is the primary way to call plugin hook implementations.
 
-        Note: Parameters are prefaced by underscores to reduce potential
-        conflicts with argument names in hook specifications.  There is a test
-        in ``test_hook_specifications.test_annotation_on_hook_specification``
-        to ensure that these argument names are never used in one of our
-        hookspecs.
+        .. note::
+
+           Parameters are prefaced by underscores to reduce potential conflicts
+           with argument names in hook specifications.  There is a test in
+           :func:`test_hook_specifications.test_annotation_on_hook_specification`
+           to ensure that these argument names are never used in one of our
+           hookspecs.
 
         Parameters
         ----------

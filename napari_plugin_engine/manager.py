@@ -44,12 +44,11 @@ logger = getLogger(__name__)
 class PluginManager:
     """Core class which manages registration of plugin objects and hook calls.
 
-    You can register new hooks by calling :meth:`add_hookspecs(namespace)
-    <.PluginManager.add_hookspecs>`. You can register plugin objects (which
-    contain hooks) by calling :meth:`register(namespace)
-    <.PluginManager.register>`.  The ``PluginManager`` is initialized
-    with a ``project_name`` that is used when discovering `hook specifications`
-    and `hook implementations`.
+    You can register new hooks by calling :meth:`~PluginManager.add_hookspecs`.
+    You can register plugin objects (which contain hooks) by calling
+    :meth:`~PluginManager.register`.  The ``PluginManager`` is initialized with
+    a ``project_name`` that is used when discovering *hook specifications* and
+    *hook implementations*.
 
     For debugging purposes you may call :meth:`.PluginManager.enable_tracing`
     which will subsequently send debug information to the trace helper.
@@ -57,7 +56,9 @@ class PluginManager:
     Parameters
     ----------
     project_name : str
-        The name of the host project.
+        The name of the host project.  All :class:`HookImplementationMarker`
+        and :class:`HookSpecificationMarker` instances must be created using
+        the same ``project_name`` to be detected by this plugin manager.
     discover_entry_point : str, optional
         The default entry_point group to search when discovering plugins with
         :meth:`PluginManager.discover`, by default None
@@ -78,6 +79,7 @@ class PluginManager:
         plugin_manager.discover(entry_point='app.plugin', prefix='app_')
 
         # hooks now live plugin_manager.hook
+        # plugin dict is at plugin_manager.plugins
     """
 
     def __init__(
@@ -132,8 +134,8 @@ class PluginManager:
         caller : HookCaller
             The HookCaller instance that will call the HookImplementations.
         methods : List[HookImplementation]
-            A list of :class:`~napari_plugin_engine.HookImplementation` objects whos functions will
-            be called during the hook call loop.
+            A list of :class:`~napari_plugin_engine.HookImplementation` objects
+            whose functions will be called during the hook call loop.
         kwargs : dict
             Keyword arguments to pass when calling the ``HookImplementation``.
 
@@ -231,10 +233,13 @@ class PluginManager:
     ) -> Tuple[int, List[PluginError]]:
         """Load plugins from distributions with an entry point named ``group``.
 
-        https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata
+        See `using package metadata
+        <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata>`_:
 
-        For background on entry points, see the Entry Point specification at
-        https://packaging.python.org/specifications/entry-points/
+        For background on entry points, see the `Entry Point specification
+        <https://packaging.python.org/specifications/entry-points/>`_ and
+        `setuptools docs
+        <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
 
         Parameters
         ----------
