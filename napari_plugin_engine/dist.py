@@ -90,7 +90,7 @@ def get_metadata(plugin, *args):  # noqa: F811
     return dct
 
 
-def standard_meta(plugin) -> Dict[str, Optional[str]]:
+def standard_meta(plugin: Any) -> Dict[str, Optional[str]]:
     meta = {}
     if get_dist(plugin):
         meta = get_metadata(

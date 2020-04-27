@@ -22,7 +22,12 @@ from typing import (
 
 from . import _tracing
 from .callers import HookResult
-from .dist import _top_level_module_to_dist, importlib_metadata
+from .dist import (
+    _top_level_module_to_dist,
+    get_metadata,
+    importlib_metadata,
+    standard_meta,
+)
 from .exceptions import (
     PluginError,
     PluginImportError,
@@ -480,6 +485,40 @@ class PluginManager:
             if plugin == val:
                 return name
 
+    def _ensure_plugin(self, name_or_object: Any) -> Any:
+        """Return plugin object given a name or object. Or raise an exception.
+
+        Parameters
+        ----------
+        name_or_object : Any
+            Either a string (in which case it is interpreted as a plugin name),
+            or a non-string object (in which case it is assumed to be a plugin
+            module or class).
+
+        Returns
+        -------
+        Any
+            The plugin object, if found.
+
+        Raises
+        ------
+        KeyError
+            If the plugin does not exist.
+        """
+        if isinstance(name_or_object, str):
+            plugin_name = name_or_object
+        else:
+            plugin_name = self.get_name(name_or_object)
+
+        if plugin_name in self.plugins:
+            return self.plugins[plugin_name]
+
+        if isinstance(name_or_object, str):
+            msg = f"No plugin found with the name {name_or_object}"
+        else:
+            msg = f"No plugin found with the name {name_or_object}"
+        raise KeyError(msg)
+
     def unregister(self, name_or_object: Any) -> Optional[Any]:
         """Unregister a plugin object or ``plugin_name``.
 
@@ -493,20 +532,13 @@ class PluginManager:
         module : Any or None
             The module object, or None if the ``name_or_object`` was not found.
         """
-
-        plugin_name = None
-        if isinstance(name_or_object, str):
-            plugin_name = name_or_object
-        else:
-            plugin_name = self.get_name(name_or_object)
-
-        if plugin_name in self.plugins:
-            plugin = self.plugins.pop(plugin_name)
-        else:
-            warnings.warn(
-                f'No plugins registered under the name {name_or_object}'
-            )
+        try:
+            plugin = self._ensure_plugin(name_or_object)
+        except KeyError as e:
+            warnings.warn(str(e))
             return None
+
+        del self.plugins[self.get_name(plugin)]
 
         for hookcaller in self._plugin2hookcallers.pop(plugin, []):
             hookcaller._remove_plugin(plugin)
@@ -752,6 +784,43 @@ class PluginManager:
             hooktrace.root.indent -= 1
 
         return self.add_hookcall_monitoring(before, after)
+
+    def get_metadata(self, plugin: Any, *values):
+        """Return metadata for a given plugin
+
+        Parameters
+        ----------
+        plugin : Any
+            Either a string (in which case it is interpreted as a plugin name),
+            or a non-string object (in which case it is assumed to be a plugin
+            module or class).
+        *values : str
+            key(s) to lookup in the plugin object distribution metadata.
+
+        Raises
+        ------
+        KeyError
+            If the plugin does not exist.
+        """
+        plugin = self._ensure_plugin(plugin)
+        return get_metadata(plugin, *values)
+
+    def list_plugin_metadata(self) -> List[Dict[str, Optional[str]]]:
+        """Return a list of metadata dicts for every registered plugin.
+
+        Returns
+        -------
+        metadata : list of dict
+            A list of dicts with plugin metadata. Every dict in the list is
+            guaranteed to have the following keys: {'plugin_name', 'version',
+            'summary', 'author', 'license', 'package', 'email', 'url'}
+        """
+        meta_list: List[dict] = []
+        for plugin in self._plugin2hookcallers:
+            plugin_meta = dict(plugin_name=self.get_name(plugin))
+            plugin_meta.update(standard_meta(plugin))
+            meta_list.append(plugin_meta)
+        return meta_list
 
 
 def _formatdef(func):

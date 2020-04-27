@@ -17,6 +17,7 @@ There are some API and feature changes, including:
   as well as
   [entry_points](https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata)
 - support for reordering of hook calls after registration.
+- enhanced API for retrieving plugin package metadata.
 - modified plugin call and registration exception handling
 - modified `HookResult` object and hook call loop, with ability to retrieve the
   `HookImpl` responsible for the result.
