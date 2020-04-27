@@ -1,5 +1,6 @@
 """Hook annotation decorators"""
 from typing import Callable, Optional
+from .implementation import HookImplementation, HookSpecification
 
 
 class HookSpecificationMarker:
@@ -40,7 +41,7 @@ class HookSpecificationMarker:
                 raise ValueError("cannot have a historic firstresult hook")
             setattr(
                 func,
-                self.project_name + "_spec",
+                HookSpecification.format_tag(self.project_name),
                 dict(
                     firstresult=firstresult,
                     historic=historic,
@@ -128,7 +129,7 @@ class HookImplementationMarker:
         def set_hook_implementation_attributes(func):
             setattr(
                 func,
-                self.project_name + "_impl",
+                HookImplementation.format_tag(self.project_name),
                 dict(
                     hookwrapper=hookwrapper,
                     optionalhook=optionalhook,

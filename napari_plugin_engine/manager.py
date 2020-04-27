@@ -35,7 +35,7 @@ from .exceptions import (
     PluginValidationError,
 )
 from .hooks import HookCaller, HookExecFunc
-from .implementation import HookImplementation
+from .implementation import HookImplementation, HookSpecification
 from .markers import HookImplementationMarker, HookSpecificationMarker
 
 logger = getLogger(__name__)
@@ -576,8 +576,9 @@ class PluginManager:
             method = getattr(namespace, name)
             if not inspect.isroutine(method):
                 continue
-            # TODO: make `_spec` a class attribute of HookSpecification
-            spec_opts = getattr(method, self.project_name + "_spec", None)
+
+            tag = HookSpecification.format_tag(self.project_name)
+            spec_opts = getattr(method, tag, None)
             if spec_opts is not None:
                 hook_caller = getattr(self.hook, name, None,)
                 if hook_caller is None:
@@ -936,8 +937,8 @@ def iter_implementations(
         method = getattr(namespace, name)
         if not inspect.isroutine(method):
             continue
-        # TODO, make "_impl" a HookImplementation class attribute
-        hookimpl_opts = getattr(method, project_name + "_impl", None)
+        tag = HookImplementation.format_tag(project_name)
+        hookimpl_opts = getattr(method, tag, None)
         if not hookimpl_opts:
             continue
 

@@ -5,6 +5,7 @@ import pytest
 from napari_plugin_engine import (
     HookCaller,
     HookImplementation,
+    HookSpecification,
     HookImplementationMarker,
     HookSpecificationMarker,
     PluginManager,
@@ -31,7 +32,7 @@ def add_specification(test_plugin_manager):
             assert not hasattr(
                 test_plugin_manager.hook, name
             ), f"Hook already exists with name: {name}"
-            opts = getattr(func, f'{project}_spec')
+            opts = getattr(func, HookSpecification.format_tag(project))
             hook_caller = HookCaller(
                 name, test_plugin_manager._hookexec, namespace, opts
             )
@@ -65,7 +66,7 @@ def add_implementation(test_plugin_manager):
             _specname = specname or func.__name__
             hook_caller = getattr(test_plugin_manager.hook, _specname, None)
             assert hook_caller, f"No hook with with name: {_specname}"
-            opts = getattr(func, f'{project}_impl')
+            opts = getattr(func, HookImplementation.format_tag(project))
             hook_caller._add_hookimpl(HookImplementation(func, **opts))
             return func
 
@@ -122,7 +123,7 @@ def temporary_hookimpl(test_plugin_manager):
         _specname = specname or func.__name__
         hook_caller = getattr(test_plugin_manager.hook, _specname, None)
         assert hook_caller, f"No hook with with name: {_specname}"
-        opts = getattr(func, f'{project}_impl')
+        opts = getattr(func, HookImplementation.format_tag(project))
         impl = HookImplementation(func, **opts)
         hook_caller._add_hookimpl(impl)
         try:

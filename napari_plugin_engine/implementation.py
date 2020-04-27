@@ -6,6 +6,8 @@ from typing import Callable, Optional, Any
 class HookImplementation:
     """A class to encapsulate hook implementations."""
 
+    TAG_SUFFIX = "_impl"
+
     def __init__(
         self,
         function: Callable,
@@ -28,6 +30,10 @@ class HookImplementation:
         self.trylast = trylast
         self._specname = specname
         self.enabled = enabled
+
+    @classmethod
+    def format_tag(cls, project_name):
+        return project_name + cls.TAG_SUFFIX
 
     @property
     def opts(self) -> dict:
@@ -67,6 +73,8 @@ class HookImplementation:
 class HookSpecification:
     """A class to encapsulate hook specifications."""
 
+    TAG_SUFFIX = "_spec"
+
     def __init__(
         self,
         namespace: Any,
@@ -88,6 +96,10 @@ class HookSpecification:
         self.firstresult = firstresult
         self.historic = historic
         self.warn_on_impl = warn_on_impl
+
+    @classmethod
+    def format_tag(cls, project_name):
+        return project_name + cls.TAG_SUFFIX
 
     @property
     def opts(self) -> dict:
