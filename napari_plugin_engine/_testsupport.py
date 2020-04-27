@@ -4,7 +4,7 @@ import pytest
 
 from napari_plugin_engine import (
     HookCaller,
-    HookImpl,
+    HookImplementation,
     HookimplMarker,
     HookspecMarker,
     PluginManager,
@@ -44,7 +44,7 @@ def add_specification(test_plugin_manager):
 
 @pytest.fixture
 def add_implementation(test_plugin_manager):
-    """Return a decorator that adds a HookImpl to test_plugin_manager."""
+    """Return a decorator that adds a HookImplementation to test_plugin_manager."""
 
     def addimpl(
         function=None,
@@ -66,7 +66,7 @@ def add_implementation(test_plugin_manager):
             hook_caller = getattr(test_plugin_manager.hook, _specname, None)
             assert hook_caller, f"No hook with with name: {_specname}"
             opts = getattr(func, f'{project}_impl')
-            hook_caller._add_hookimpl(HookImpl(func, **opts))
+            hook_caller._add_hookimpl(HookImplementation(func, **opts))
             return func
 
         return wrap(function) if function is not None else wrap
@@ -97,7 +97,7 @@ def caller_from_implementation(
 
 @pytest.fixture
 def temporary_hookimpl(test_plugin_manager):
-    """A fixture that can be used to insert a HookImpl in the hook call loop.
+    """A fixture that can be used to insert a HookImplementation in the hook call loop.
 
     Use as a context manager, which will return the hook_caller for the
     corresponding hook specification.
@@ -123,7 +123,7 @@ def temporary_hookimpl(test_plugin_manager):
         hook_caller = getattr(test_plugin_manager.hook, _specname, None)
         assert hook_caller, f"No hook with with name: {_specname}"
         opts = getattr(func, f'{project}_impl')
-        impl = HookImpl(func, **opts)
+        impl = HookImplementation(func, **opts)
         hook_caller._add_hookimpl(impl)
         try:
             yield hook_caller

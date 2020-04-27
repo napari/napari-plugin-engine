@@ -10,7 +10,7 @@ API Reference
    PluginManager
    HookCaller
    HookResult
-   HookImpl
+   HookImplementation
    HookSpec
    HookspecMarker
    HookimplMarker
@@ -51,10 +51,10 @@ HookSpec
 .. autoclass:: HookSpec
    :members:
 
-HookImpl
+HookImplementation
 ========
 
-.. autoclass:: HookImpl
+.. autoclass:: HookImplementation
    :members:
 
 

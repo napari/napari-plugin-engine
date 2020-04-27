@@ -78,7 +78,7 @@ def test_reordering_hook_caller(dummy_plugin_manager, order, expected_result):
     hook_caller.bring_to_front(START_ORDER)
     assert hook_caller() == START_ORDER
 
-    # try again using HookImpl INSTANCES instead of plugin names
+    # try again using HookImplementation INSTANCES instead of plugin names
     instances = [hook_caller.get_plugin_implementation(i) for i in order]
     hook_caller.bring_to_front(instances)
     assert hook_caller() == expected_result
@@ -89,7 +89,7 @@ def test_reordering_hook_caller_raises(dummy_plugin_manager):
     hook_caller = dummy_plugin_manager.hooks.myhook
 
     with pytest.raises(TypeError):
-        # all items must be the name of a plugin, or a HookImpl instance
+        # all items must be the name of a plugin, or a HookImplementation instance
         hook_caller.bring_to_front([1, 2])
 
     with pytest.raises(ValueError):

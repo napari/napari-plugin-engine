@@ -35,7 +35,7 @@ from .exceptions import (
     PluginValidationError,
 )
 from .hooks import HookCaller, HookExecFunc
-from .implementation import HookImpl
+from .implementation import HookImplementation
 from .markers import HookimplMarker, HookspecMarker
 
 logger = getLogger(__name__)
@@ -109,7 +109,10 @@ class PluginManager:
         return self.hook
 
     def _hookexec(
-        self, caller: HookCaller, methods: List[HookImpl], kwargs: dict
+        self,
+        caller: HookCaller,
+        methods: List[HookImplementation],
+        kwargs: dict,
     ) -> HookResult:
         """Returns a function that will call a set of hookipmls with a caller.
 
@@ -123,12 +126,12 @@ class PluginManager:
         Parameters
         ----------
         caller : HookCaller
-            The HookCaller instance that will call the HookImpls.
-        methods : List[HookImpl]
-            A list of :class:`~napari_plugin_engine.HookImpl` objects whos functions will
+            The HookCaller instance that will call the HookImplementations.
+        methods : List[HookImplementation]
+            A list of :class:`~napari_plugin_engine.HookImplementation` objects whos functions will
             be called during the hook call loop.
         kwargs : dict
-            Keyword arguments to pass when calling the ``HookImpl``.
+            Keyword arguments to pass when calling the ``HookImplementation``.
 
         Returns
         -------
@@ -649,15 +652,17 @@ class PluginManager:
             plugin=plugin, plugin_name=plugin_name, error_type=error_type
         )
 
-    def _verify_hook(self, hook_caller: HookCaller, hookimpl: HookImpl):
+    def _verify_hook(
+        self, hook_caller: HookCaller, hookimpl: HookImplementation
+    ):
         """Check validity of a ``hookimpl``
 
         Parameters
         ----------
         hook_caller : HookCaller
             A :class:`HookCaller` instance.
-        hookimpl : HookImpl
-            A :class:`HookImpl` instance, implementing the hook in
+        hookimpl : HookImplementation
+            A :class:`HookImplementation` instance, implementing the hook in
             ``hook_caller``.
 
         Raises
@@ -733,8 +738,10 @@ class PluginManager:
 
     def add_hookcall_monitoring(
         self,
-        before: Callable[[str, List[HookImpl], dict], None],
-        after: Callable[[HookResult, str, List[HookImpl], dict], None],
+        before: Callable[[str, List[HookImplementation], dict], None],
+        after: Callable[
+            [HookResult, str, List[HookImplementation], dict], None
+        ],
     ) -> Callable[[], None]:
         """Add before/after tracing functions for all hooks.
 
@@ -742,7 +749,7 @@ class PluginManager:
         tracers.
 
         ``before(hook_name, hook_impls, kwargs)`` will be called ahead of all
-        hook calls and receive a hookcaller instance, a list of HookImpl
+        hook calls and receive a hookcaller instance, a list of HookImplementation
         instances and the keyword arguments for the hook call.
 
         ``after(outcome, hook_name, hook_impls, kwargs)`` receives the same
@@ -753,7 +760,7 @@ class PluginManager:
         oldcall = self._inner_hookexec
 
         def traced_hookexec(
-            caller: HookCaller, impls: List[HookImpl], kwargs: dict
+            caller: HookCaller, impls: List[HookImplementation], kwargs: dict
         ):
             before(caller.name, impls, kwargs)
             outcome = HookResult.from_call(
@@ -913,7 +920,7 @@ def get_canonical_name(namespace: Any) -> str:
 
 def iter_implementations(
     namespace, project_name: str
-) -> Generator[HookImpl, None, None]:
+) -> Generator[HookImplementation, None, None]:
     # register matching hook implementations of the plugin
     for name in dir(namespace):
         # check all attributes/methods of plugin and look for functions or
@@ -921,13 +928,13 @@ def iter_implementations(
         method = getattr(namespace, name)
         if not inspect.isroutine(method):
             continue
-        # TODO, make "_impl" a HookImpl class attribute
+        # TODO, make "_impl" a HookImplementation class attribute
         hookimpl_opts = getattr(method, project_name + "_impl", None)
         if not hookimpl_opts:
             continue
 
-        # create the HookImpl instance for this method
-        yield HookImpl(method, namespace, **hookimpl_opts)
+        # create the HookImplementation instance for this method
+        yield HookImplementation(method, namespace, **hookimpl_opts)
 
 
 def ensure_namespace(obj: Any, name: str = 'orphan') -> Type:

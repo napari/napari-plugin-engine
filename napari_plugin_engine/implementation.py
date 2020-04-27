@@ -3,7 +3,7 @@ import sys
 from typing import Callable, Optional, Any
 
 
-class HookImpl:
+class HookImplementation:
     """A class to encapsulate hook implementations."""
 
     def __init__(
@@ -52,7 +52,7 @@ class HookImpl:
         ]
         suffix = (' ' + " ".join(truthy)) if truthy else ''
         return (
-            f"<HookImpl plugin={self.plugin_name!r}"
+            f"<HookImplementation plugin={self.plugin_name!r}"
             f" spec={self.specname!r}{suffix}>"
         )
 

@@ -9,7 +9,7 @@ __all__ = [
     "get_metadata",
     "HookCaller",
     "HookCallError",
-    "HookImpl",
+    "HookImplementation",
     "HookimplMarker",
     "HookResult",
     "HookSpec",
@@ -37,7 +37,7 @@ from .exceptions import (
     PluginImplementationError,
 )
 from .hooks import HookCaller
-from .implementation import HookImpl, HookSpec
+from .implementation import HookImplementation, HookSpec
 from .manager import PluginManager
 from .markers import HookimplMarker, HookspecMarker
 from .dist import get_metadata, standard_metadata

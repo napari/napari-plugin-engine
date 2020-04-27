@@ -100,5 +100,5 @@ def test_repr():
 
     plugin = Plugin()
     pname = pm.register(plugin)
-    expected = f"<HookImpl plugin={pname!r} spec='myhook'>"
+    expected = f"<HookImplementation plugin={pname!r} spec='myhook'>"
     assert repr(pm.hook.myhook._nonwrappers[0]) == expected

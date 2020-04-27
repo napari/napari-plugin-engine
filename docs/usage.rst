@@ -121,7 +121,7 @@ Use (call) the plugin implementations
 =====================================
 
 Your :class:`HookCaller` should now be populated with any of the
-implementations found in plugins, as :class:`HookImpl` objects on the
+implementations found in plugins, as :class:`HookImplementation` objects on the
 :class:`HookCaller`.
 
 .. code-block:: python

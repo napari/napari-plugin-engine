@@ -4,7 +4,7 @@ from napari_plugin_engine import (
     HookimplMarker,
     HookspecMarker,
     PluginValidationError,
-    HookImpl,
+    HookImplementation,
     HookSpec,
 )
 
@@ -30,7 +30,9 @@ def addmeth(hook_caller):
             example_implementation(
                 tryfirst=tryfirst, trylast=trylast, hookwrapper=hookwrapper
             )(func)
-            hook_caller._add_hookimpl(HookImpl(func, **func.example_impl))
+            hook_caller._add_hookimpl(
+                HookImplementation(func, **func.example_impl)
+            )
             return func
 
         return wrap
@@ -312,7 +314,7 @@ def test_hookrelay_registration_by_specname_raises(pm):
 
 
 def test_legacy_specimpl_opt():
-    impl = HookImpl(lambda x: x)
+    impl = HookImplementation(lambda x: x)
     assert impl.opts
 
     spec = HookSpec(type("Hook", (), {'x': lambda x: x}), 'x')

@@ -3,7 +3,7 @@ import sys
 from types import TracebackType
 from typing import Any, List, Optional, Tuple, Union, Type
 from .exceptions import PluginCallError, HookCallError
-from .implementation import HookImpl
+from .implementation import HookImplementation
 
 
 def _raise_wrapfail(wrap_controller, msg):
@@ -28,8 +28,8 @@ class HookResult:
 
     Parameters
     ----------
-    results : List[Tuple[Any, HookImpl]]
-        A list of (result, HookImpl) tuples, with the result and HookImpl
+    results : List[Tuple[Any, HookImplementation]]
+        A list of (result, HookImplementation) tuples, with the result and HookImplementation
         object responsible for each result collected during a _multicall loop.
     excinfo : tuple
         The output of sys.exc_info() if raised during the multicall loop.
@@ -44,14 +44,16 @@ class HookResult:
 
     def __init__(
         self,
-        result: List[Tuple[Any, HookImpl]],
+        result: List[Tuple[Any, HookImplementation]],
         excinfo: Optional[ExcInfo],
         firstresult: bool = False,
         plugin_errors: Optional[List[PluginCallError]] = None,
     ):
         self._result: Any = []
-        #: The HookImpl(s) that were responsible for each result in ``result``
-        self.implementation: Optional[Union[HookImpl, List[HookImpl]]] = []
+        #: The HookImplementation(s) that were responsible for each result in ``result``
+        self.implementation: Optional[
+            Union[HookImplementation, List[HookImplementation]]
+        ] = []
         #: Whether this HookResult came from a ``firstresult`` multicall.
         self.is_firstresult: bool = firstresult
         self._excinfo = excinfo
@@ -118,14 +120,16 @@ class HookResult:
 
 
 def _multicall(
-    hook_impls: List[HookImpl], caller_kwargs: dict, firstresult: bool = False,
+    hook_impls: List[HookImplementation],
+    caller_kwargs: dict,
+    firstresult: bool = False,
 ) -> HookResult:
-    """The primary :class:`~napari_plugin_engine.HookImpl` call loop.
+    """The primary :class:`~napari_plugin_engine.HookImplementation` call loop.
 
     Parameters
     ----------
     hook_impls : list
-        A sequence of hook implementation (HookImpl) objects
+        A sequence of hook implementation (HookImplementation) objects
     caller_kwargs : dict
         Keyword:value pairs to pass to each ``hook_impl.function``.  Every
         key in the dict must be present in the ``argnames`` property for each

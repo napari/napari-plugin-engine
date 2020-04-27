@@ -7,18 +7,20 @@ from typing import Any, Callable, List, Optional, Union
 
 from .callers import HookCallError, HookResult, _multicall
 from .exceptions import PluginCallError
-from .implementation import HookImpl, HookSpec
+from .implementation import HookImplementation, HookSpec
 
-HookExecFunc = Callable[['HookCaller', List[HookImpl], dict], HookResult]
-"""A function that loops calling a list of :class:`~napari_plugin_engine.HookImpl` s and
+HookExecFunc = Callable[
+    ['HookCaller', List[HookImplementation], dict], HookResult
+]
+"""A function that loops calling a list of :class:`~napari_plugin_engine.HookImplementation` s and
 returns a :class:`~napari_plugin_engine.HookResult`.
 
 Parameters
 ----------
 hook_caller : HookCaller
     a :class:`HookCaller` instance.
-hook_impls : List[HookImpl]
-    a list of :class:`~napari_plugin_engine.HookImpl` instances to call.
+hook_impls : List[HookImplementation]
+    a list of :class:`~napari_plugin_engine.HookImplementation` instances to call.
 kwargs : dict
     a mapping of keyword arguments to provide to the implementation.
 
@@ -43,7 +45,7 @@ class HookCaller:
        # assuming `some_module` had an @hookspec named `my specification`
        assert isinstance(pm.hook.my_specification, HookCaller)
 
-    Each ``HookCaller`` instance stores all of the :class:`HookImpl` objects
+    Each ``HookCaller`` instance stores all of the :class:`HookImplementation` objects
     discovered during :meth:`plugin registration <PluginManager.register>`
     (each of which capture the implementation of a specific plugin for this
     hook specification).
@@ -79,8 +81,8 @@ class HookCaller:
         spec_opts: Optional[dict] = None,
     ):
         self.name = name
-        self._wrappers: List[HookImpl] = []
-        self._nonwrappers: List[HookImpl] = []
+        self._wrappers: List[HookImplementation] = []
+        self._nonwrappers: List[HookImplementation] = []
         self._hookexec = hook_execute
         self.argnames = None
         self.kwargnames = None
@@ -117,11 +119,11 @@ class HookCaller:
             if remove(self._nonwrappers) is None:
                 raise ValueError("plugin %r not found" % (plugin,))
 
-    def get_hookimpls(self) -> List[HookImpl]:
+    def get_hookimpls(self) -> List[HookImplementation]:
         # Order is important for _hookexec
         return self._nonwrappers + self._wrappers
 
-    def _add_hookimpl(self, hookimpl: HookImpl):
+    def _add_hookimpl(self, hookimpl: HookImplementation):
         """Add an implementation to the callback chain.
         """
         if hookimpl.hookwrapper:
@@ -164,7 +166,7 @@ class HookCaller:
         methods using the specified ``kwargs`` as call parameters. """
         old = list(self._nonwrappers), list(self._wrappers)
         for method in methods:
-            self._add_hookimpl(HookImpl(method))
+            self._add_hookimpl(HookImplementation(method))
         try:
             return self(**kwargs)
         finally:
@@ -193,9 +195,9 @@ class HookCaller:
                 f"for plugin {plugin_name}."
             )
 
-    def index(self, value: Union[str, HookImpl]) -> int:
-        """Return index of plugin_name or a HookImpl in self._nonwrappers"""
-        if isinstance(value, HookImpl):
+    def index(self, value: Union[str, HookImplementation]) -> int:
+        """Return index of plugin_name or a HookImplementation in self._nonwrappers"""
+        if isinstance(value, HookImplementation):
             return self._nonwrappers.index(value)
         elif isinstance(value, str):
             plugin_names = [imp.plugin_name for imp in self._nonwrappers]
@@ -203,10 +205,12 @@ class HookCaller:
         else:
             raise TypeError(
                 "argument provided to index must either be the "
-                "(string) name of a plugin, or a HookImpl instance"
+                "(string) name of a plugin, or a HookImplementation instance"
             )
 
-    def bring_to_front(self, new_order: Union[List[str], List[HookImpl]]):
+    def bring_to_front(
+        self, new_order: Union[List[str], List[HookImplementation]]
+    ):
         """Move items in ``new_order`` to the front of the call order.
 
         By default, hook implementations are called in last-in-first-out order
@@ -215,19 +219,19 @@ class HookCaller:
 
         This function accepts a `HookCaller` instance and the desired
         ``new_order`` of the hook implementations (in the form of list of
-        plugin names, or a list of actual ``HookImpl`` instances) and reorders
+        plugin names, or a list of actual ``HookImplementation`` instances) and reorders
         the implementations in the hook caller accordingly.
 
         NOTE: hook implementations are actually stored in *two* separate list
         attributes in the hook caller: ``HookCaller._wrappers`` and
         ``HookCaller._nonwrappers``, according to whether the corresponding
-        ``HookImpl`` instance was marked as a wrapper or not.  This method
+        ``HookImplementation`` instance was marked as a wrapper or not.  This method
         *only* sorts _nonwrappers.
         For more, see: https://pluggy.readthedocs.io/en/latest/#wrappers
 
         Parameters
         ----------
-        new_order :  list of str or list of ``HookImpl`` instances
+        new_order :  list of str or list of ``HookImplementation`` instances
             The desired CALL ORDER of the hook implementations.  The list
             does *not* need to include every hook implementation in
             :meth:`~HookCaller.get_hookimpls`, but those that are not included
@@ -237,10 +241,10 @@ class HookCaller:
         ------
         TypeError
             If any item in ``new_order`` is neither a string (plugin_name) or a
-            ``HookImpl`` instance.
+            ``HookImplementation`` instance.
         ValueError
             If any item in ``new_order`` is neither the name of a plugin or a
-            ``HookImpl`` instance that is present in self._nonwrappers.
+            ``HookImplementation`` instance that is present in self._nonwrappers.
         ValueError
             If ``new_order`` argument has multiple entries for the same
             implementation.
@@ -296,7 +300,7 @@ class HookCaller:
         # for details on the difference between wrappers and nonwrappers, see:
         # https://pluggy.readthedocs.io/en/latest/#wrappers
         _old_nonwrappers = self._nonwrappers.copy()
-        _new_nonwrappers: List[HookImpl] = []
+        _new_nonwrappers: List[HookImplementation] = []
         indices = [self.index(elem) for elem in new_order]
         for i in indices:
             # inserting because they get called in reverse order.
@@ -398,7 +402,7 @@ class HookCaller:
             raise PluginCallError(implementation) from exc
 
     def call_with_result_obj(
-        self, *, _skip_impls: List[HookImpl] = list(), **kwargs
+        self, *, _skip_impls: List[HookImplementation] = list(), **kwargs
     ) -> HookResult:
         """Call hook implementation(s) for this spec and return HookResult.
 
@@ -408,8 +412,8 @@ class HookCaller:
 
         Parameters
         ----------
-        _skip_impls : List[HookImpl], optional
-            A list of HookImpl instances that should be *skipped* when calling
+        _skip_impls : List[HookImplementation], optional
+            A list of HookImplementation instances that should be *skipped* when calling
             hook implementations, by default None
         **kwargs
             keys should match the names of arguments in the corresponding hook
@@ -442,7 +446,7 @@ class HookCaller:
         self,
         *args,
         _plugin: Optional[str] = None,
-        _skip_impls: List[HookImpl] = list(),
+        _skip_impls: List[HookImplementation] = list(),
         **kwargs,
     ) -> Union[Any, List[Any]]:
         """Call hook implementation(s) for this spec and return result(s).
@@ -461,8 +465,8 @@ class HookCaller:
             The name of a specific plugin to use.  By default all
             implementations will be called (though if ``firstresult==True``,
             only the first non-None result will be returned).
-        _skip_impls : List[HookImpl], optional
-            A list of HookImpl instances that should be *skipped* when calling
+        _skip_impls : List[HookImplementation], optional
+            A list of HookImplementation instances that should be *skipped* when calling
             hook implementations, by default None
         **kwargs
             keys should match the names of arguments in the corresponding hook

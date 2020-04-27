@@ -3,7 +3,7 @@ from napari_plugin_engine import (
     HookCallError,
     HookspecMarker,
     HookimplMarker,
-    HookImpl,
+    HookImplementation,
 )
 from napari_plugin_engine.callers import _multicall
 
@@ -17,7 +17,7 @@ def multicall(methods, kwargs, firstresult=False):
     caller = _multicall
     hookfuncs = []
     for method in methods:
-        f = HookImpl(method, **method.example_impl)
+        f = HookImplementation(method, **method.example_impl)
         hookfuncs.append(f)
     # our _multicall function returns our own HookResult object.
     # so to make these pluggy tests pass, we have to access .result to mimic
