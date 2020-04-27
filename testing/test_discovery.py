@@ -11,17 +11,17 @@ from napari_plugin_engine.manager import temp_path_additions
 from napari_plugin_engine.dist import standard_metadata, get_version
 
 GOOD_PLUGIN = """
-from napari_plugin_engine import HookimplMarker
+from napari_plugin_engine import HookImplementationMarker
 
-@HookimplMarker("test")
+@HookImplementationMarker("test")
 def test_specification(arg1, arg2):
     return arg1 + arg2
 """
 
 INVALID_PLUGIN = """
-from napari_plugin_engine import HookimplMarker
+from napari_plugin_engine import HookImplementationMarker
 
-@HookimplMarker("test")
+@HookImplementationMarker("test")
 def test_specification(arg1, arg2, arg3):
     return arg1 + arg2 + arg3
 """

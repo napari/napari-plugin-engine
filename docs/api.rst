@@ -13,7 +13,7 @@ API Reference
    HookImplementation
    HookSpec
    HookspecMarker
-   HookimplMarker
+   HookImplementationMarker
 
 
 PluginManager
@@ -69,10 +69,10 @@ HookspecMarker
    :special-members:
    :exclude-members: __init__, __weakref__
 
-HookimplMarker
+HookImplementationMarker
 --------------
 
-.. autoclass:: HookimplMarker
+.. autoclass:: HookImplementationMarker
    :members:
    :special-members:
    :exclude-members: __init__, __weakref__

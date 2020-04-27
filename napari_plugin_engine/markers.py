@@ -55,7 +55,7 @@ class HookspecMarker:
             return setattr_hookspec_opts
 
 
-class HookimplMarker:
+class HookImplementationMarker:
     """Decorator helper class for marking functions as hook implementations.
 
     You can instantiate with a ``project_name`` to get a decorator. Calling

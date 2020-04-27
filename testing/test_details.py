@@ -1,9 +1,13 @@
 import warnings
 import pytest
-from napari_plugin_engine import PluginManager, HookimplMarker, HookspecMarker
+from napari_plugin_engine import (
+    PluginManager,
+    HookImplementationMarker,
+    HookspecMarker,
+)
 
 hookspec = HookspecMarker("example")
-hookimpl = HookimplMarker("example")
+hookimpl = HookImplementationMarker("example")
 
 
 def test_warn_when_deprecated_specified(recwarn):

@@ -1,7 +1,11 @@
 import pytest
-from napari_plugin_engine import HookimplMarker, HookspecMarker, PluginManager
+from napari_plugin_engine import (
+    HookImplementationMarker,
+    HookspecMarker,
+    PluginManager,
+)
 
-dummy_hook_implementation = HookimplMarker("dummy")
+dummy_hook_implementation = HookImplementationMarker("dummy")
 dummy_hook_specification = HookspecMarker("dummy")
 
 

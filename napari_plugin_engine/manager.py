@@ -36,7 +36,7 @@ from .exceptions import (
 )
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImplementation
-from .markers import HookimplMarker, HookspecMarker
+from .markers import HookImplementationMarker, HookspecMarker
 
 logger = getLogger(__name__)
 
@@ -473,7 +473,7 @@ class PluginManager:
             canonical plugin name, or ``None`` if the name is blocked from
             registering.
         """
-        mark = HookimplMarker(self.project_name)
+        mark = HookImplementationMarker(self.project_name)
         clean_dct = {
             key: mark(specname=key, **kwargs)(val)
             for key, val in dct.items()

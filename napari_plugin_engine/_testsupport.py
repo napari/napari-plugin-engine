@@ -5,7 +5,7 @@ import pytest
 from napari_plugin_engine import (
     HookCaller,
     HookImplementation,
-    HookimplMarker,
+    HookImplementationMarker,
     HookspecMarker,
     PluginManager,
 )
@@ -56,7 +56,7 @@ def add_implementation(test_plugin_manager):
     ):
         def wrap(func):
             project = test_plugin_manager.project_name
-            HookimplMarker(project)(
+            HookImplementationMarker(project)(
                 tryfirst=tryfirst,
                 trylast=trylast,
                 hookwrapper=hookwrapper,
@@ -117,7 +117,7 @@ def temporary_hookimpl(test_plugin_manager):
     @contextmanager
     def wrap(func, specname=None, *, tryfirst=True, trylast=None):
         project = test_plugin_manager.project_name
-        marker = HookimplMarker(project)
+        marker = HookImplementationMarker(project)
         marker(tryfirst=tryfirst, trylast=trylast, specname=specname)(func)
         _specname = specname or func.__name__
         hook_caller = getattr(test_plugin_manager.hook, _specname, None)

@@ -1,13 +1,13 @@
 import pytest
 from napari_plugin_engine import (
     PluginValidationError,
-    HookimplMarker,
+    HookImplementationMarker,
     HookspecMarker,
 )
 
 
 hookspec = HookspecMarker("example")
-hookimpl = HookimplMarker("example")
+hookimpl = HookImplementationMarker("example")
 
 
 def test_argmismatch(pm):

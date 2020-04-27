@@ -6,14 +6,14 @@ import pytest
 from napari_plugin_engine import (
     PluginValidationError,
     HookCallError,
-    HookimplMarker,
+    HookImplementationMarker,
     HookspecMarker,
 )
 from napari_plugin_engine.dist import importlib_metadata
 
 
 hookspec = HookspecMarker("example")
-hookimpl = HookimplMarker("example")
+hookimpl = HookImplementationMarker("example")
 
 
 def test_plugin_double_register(pm):

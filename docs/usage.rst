@@ -62,16 +62,16 @@ In this case, there will be a new one at ``plugin_manager.hooks.do_something``.
 
 Plugins may then provide *implementations* for your hook specifications, by
 creating classes or modules that contain functions that are decorated with an
-instance of a :class:`HookimplMarker` that has been created using the *same*
+instance of a :class:`HookImplementationMarker` that has been created using the *same*
 project name (in this example: ``'my_project'``)
 
 .. code-block:: python
 
    # some_plugin.py
 
-   from napari_plugin_engine import HookimplMarker
+   from napari_plugin_engine import HookImplementationMarker
 
-   my_project_hook_implementation = HookimplMarker('my_project')
+   my_project_hook_implementation = HookImplementationMarker('my_project')
 
    @my_project_hook_implementation
    def do_something(arg1, arg2):
@@ -108,7 +108,7 @@ looking for modules that begin with a specific prefix.
 You can look for either or both, in single call to
 :meth:`~PluginManager.discover`, which will import any modules or entry_points
 that follow one of the aforementioned conventions, and search them for
-functions decorated with the appropriate :class:`HookimplMarker` (as shown
+functions decorated with the appropriate :class:`HookImplementationMarker` (as shown
 above in ``some_plugin.py``)
 
 .. code-block:: python
