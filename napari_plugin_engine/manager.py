@@ -869,8 +869,17 @@ class PluginManager:
         -------
         metadata : dict
             A  dicts with plugin metadata. The dict is guaranteed to have the
-            following keys: {'plugin_name', 'version', 'summary', 'author',
-            'license', 'package', 'email', 'url'}
+            following keys:
+
+            - **plugin_name**: The name of the plugin as registered
+            - **package**: The name of the package
+            - **version**: The version of the plugin package
+            - **summary**: A one-line summary of what the distribution does
+            - **author**: The author’s name
+            - **email**: The author’s (or maintainer's) e-mail address.
+            - **license**: The license covering the distribution
+            - **url**: The home page for the package, or dowload url if N/A.
+            - **hooks**: A list of hookspec names that this plugin implements.
 
         Raises
         ------
@@ -879,7 +888,16 @@ class PluginManager:
         """
         if isinstance(plugin, str):
             plugin = self._ensure_plugin(plugin)
-        plugin_meta = dict(plugin_name=self.get_name(plugin))
+        plugin_name = self.get_name(plugin)
+        # TODO: is there no better API for this already?
+        hooks = []
+        for caller in self._plugin2hookcallers[plugin]:
+            try:
+                impl = caller.get_plugin_implementation(plugin_name)
+                hooks.append(impl.specname)
+            except KeyError:
+                pass
+        plugin_meta = dict(plugin_name=plugin_name, hooks=hooks)
         plugin_meta.update(standard_metadata(plugin))
         return plugin_meta
 
@@ -888,10 +906,10 @@ class PluginManager:
 
         Returns
         -------
-        metadata : list of dict
+        metadata : dict
             A list of dicts with plugin metadata. Every dict in the list is
-            guaranteed to have the following keys: {'plugin_name', 'version',
-            'summary', 'author', 'license', 'package', 'email', 'url'}
+            guaranteed to have the following keys mentioned in
+            :meth:`~PluginManager.get_standard_metadata`
         """
         return [
             self.get_standard_metadata(plugin)
