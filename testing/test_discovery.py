@@ -56,12 +56,18 @@ def good_entrypoint_plugin(tmp_path):
 @pytest.fixture
 def double_convention_plugin(tmp_path):
     """A good plugin that uses entry points but ALSO has naming convention"""
-    (tmp_path / "app_double_plugin.py").write_text(GOOD_PLUGIN)
-    distinfo = tmp_path / "app_double_plugin-1.2.3.dist-info"
+    module_folder = tmp_path / "app_double_plugin"
+    module_folder.mkdir()
+    (module_folder / "__init__.py").write_text('')
+    (module_folder / "module_a.py").write_text(GOOD_PLUGIN)
+    (module_folder / "module_b.py").write_text(GOOD_PLUGIN)
+    distinfo = tmp_path / "app_double_plugin-3.2.1.dist-info"
     distinfo.mkdir()
     (distinfo / "top_level.txt").write_text('app_double_plugin')
     (distinfo / "entry_points.txt").write_text(
-        "[app.plugin]\ndouble = app_double_plugin"
+        "[app.plugin]\n"
+        "double_a = app_double_plugin.module_a\n"
+        "double_b = app_double_plugin.module_b\n"
     )
     (distinfo / "METADATA").write_text(
         "Metadata-Version: 2.1\n"
@@ -122,7 +128,7 @@ def full_plugin_manager(
     cnt, err = test_plugin_manager.discover(
         tmp_path, entry_point='app.plugin', prefix='app_'
     )
-    assert cnt == 3
+    assert cnt == 4
     assert len(err) == 2
     return test_plugin_manager
 
@@ -139,11 +145,16 @@ def test_plugin_meta(
     cnt, err = test_plugin_manager.discover(
         tmp_path, entry_point='app.plugin', prefix='app_'
     )
-    plugin_names = set(test_plugin_manager.plugins)
-    assert plugin_names == {'double', 'good_entry', 'app_good_plugin'}
+    assert set(test_plugin_manager.plugins) == {
+        'double_a',
+        'double_b',
+        'good_entry',
+        'app_good_plugin',
+    }
 
     versions = {
-        'double': '3.2.1',
+        'double_a': '3.2.1',
+        'double_b': '3.2.1',
         'good_entry': '1.2.3',
         'app_good_plugin': '',
     }
@@ -182,26 +193,33 @@ def test_double_convention(
         ...
 
     assert not test_plugin_manager.plugins
-    cnt, err = test_plugin_manager.discover(tmp_path, **regkwargs)
-    hook_caller = test_plugin_manager.hook.test_specification
-    if regkwargs:
-        assert cnt == 1
-        assert len(hook_caller.get_hookimpls()) == 1
-        if 'entry_point' in regkwargs:
-            # if an entry_point with a matching group is provided
-            # the plugin will be named after the entrypoint name
-            assert 'double' in test_plugin_manager.plugins.keys()
+    with temp_path_additions(tmp_path):
+        cnt, _ = test_plugin_manager.discover(**regkwargs)
+        hook_caller = test_plugin_manager.hook.test_specification
+        plugin_names = list(test_plugin_manager.plugins.keys())
+        if regkwargs:
+            if 'entry_point' in regkwargs:
+                # if an entry_point with a matching group is provided
+                # the plugin will be named after the entrypoint name
+                assert 'double_a' in plugin_names
+                assert 'double_b' in plugin_names
+                assert 'double-package' not in test_plugin_manager.plugins
+                assert len(hook_caller.get_hookimpls()) == 2
+            else:  # just prefix
+                # if entry point discovery is disabled, but a dist-info folder
+                # for the package is found, then the plugin will be named using
+                # the package `Name` key in the METADATA file.
+                assert 'double-package' in plugin_names
+                # however, in this case, there are no implementations in the
+                # top level module (which is the only way naming convention
+                # works)
+                assert len(hook_caller.get_hookimpls()) == 0
+            # (name convention modules that do not have associated METADATA will
+            # just be named after the module)
         else:
-            # if entry point discovery is disabled, but a dist-info folder for
-            # the package is found, then the plugin will be named using the
-            # package `Name` key in the METADATA file.
-            assert 'double-package' in test_plugin_manager.plugins.keys()
-        # (name convention modules that do not have associated METADATA will
-        # just be named after the module)
-    else:
-        assert cnt == 0
-        assert not hook_caller.get_hookimpls()
-        assert 'double' not in test_plugin_manager.plugins.keys()
+            assert cnt == 0
+            assert not hook_caller.get_hookimpls()
+            assert 'double' not in plugin_names
 
 
 def test_plugin_discovery_by_prefix(
@@ -333,9 +351,10 @@ def test_lazy_autodiscovery(
 
 def test_discovery_all_together(full_plugin_manager):
     hook_caller = full_plugin_manager.hook.test_specification
-    assert len(hook_caller.get_hookimpls()) == 3
-    assert len(full_plugin_manager.plugins) == 3
-    assert 'double' in full_plugin_manager.plugins.keys()
+    assert len(hook_caller.get_hookimpls()) == 4
+    assert len(full_plugin_manager.plugins) == 4
+    assert 'double_a' in full_plugin_manager.plugins.keys()
+    assert 'double_b' in full_plugin_manager.plugins.keys()
     assert 'app_good_plugin' in full_plugin_manager.plugins.keys()
     assert 'good_entry' in full_plugin_manager.plugins.keys()
 

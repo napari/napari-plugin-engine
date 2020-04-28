@@ -207,7 +207,9 @@ class PluginManager:
         with temp_path_additions(path):
             count = 0
             count, errs = self.load_entrypoints(entry_point, '', ignore_errors)
-            n, err = self.load_modules_by_prefix(prefix, ignore_errors)
+            n, err = self.load_modules_by_prefix(
+                prefix, ignore_errors, ignore_group=entry_point
+            )
             count += n
             errs += err
             if count:
@@ -292,7 +294,7 @@ class PluginManager:
         return count, errors
 
     def load_modules_by_prefix(
-        self, prefix: str, ignore_errors: bool = True
+        self, prefix: str, ignore_errors: bool = True, ignore_group: str = '',
     ) -> Tuple[int, List[PluginError]]:
         """Load plugins by module naming convention.
 
@@ -306,6 +308,11 @@ class PluginManager:
         ignore_errors : bool, optional
             If ``False``, any errors raised during registration will be
             immediately raised, by default True
+        ignore_entry : str, optional
+            If a module name starts with ``prefix`` but declares an entry_point
+            with a group named ``ignore_group`` or
+            :attr:`~PluginManager.discover_entry_point`, then it will be
+            ignored.
 
         Returns
         -------
@@ -327,7 +334,15 @@ class PluginManager:
         for finder, mod_name, ispkg in pkgutil.iter_modules():
             if not mod_name.startswith(prefix):
                 continue
+            # try to find a distibution for this module
             dist = _top_level_module_to_dist().get(mod_name)
+            # if the distribution declares any entrypoints that we known this
+            # manager supports, or which are explicitly excluded, then skip
+            # this module.
+            if dist:
+                skip = (ignore_group, self.discover_entry_point)
+                if any(ep.group in skip for ep in dist.entry_points):  # type: ignore
+                    continue
             name = dist.metadata.get("name") if dist else mod_name
             if self.is_registered(name) or self.is_blocked(name):
                 continue
@@ -883,6 +898,32 @@ class PluginManager:
             for plugin in self._plugin2hookcallers
         ]
 
+    def __str__(self) -> str:
+        nhooks = len(self.hooks)
+        nplug = len(self.plugins)
+        text = f'PluginManager for "{self.project_name}"\n'
+        text += f'({nhooks} hook specs and {nplug} plugins)\n'
+        text += '-' * 45 + '\n'
+        for name, plugin in sorted(self.plugins.items(), key=lambda x: x[0]):
+            text += self.plugin_info(plugin) + "\n"
+            # nhooks = len(self._plugin2hookcallers[plugin])
+            # text += f'{name:29}  {nhooks:3} hooks\n'
+
+        return text
+
+    def plugin_info(self, plugin) -> str:
+        plugin = self._ensure_plugin(plugin)
+        plugin_name = self.get_name(plugin)
+        version = self.get_metadata(plugin, 'version')
+        hooks = self._plugin2hookcallers[plugin]
+        name = f'{plugin_name} v{version}'
+        text = f'{name:34}  {len(hooks):3} hooks\n'
+        for hook_caller in hooks:
+            for impl in hook_caller.get_hookimpls():
+                if impl.plugin_name == plugin_name:
+                    text += f"  - {impl.specname}\n"
+        return text
+
 
 def _formatdef(func):
     return f"{func.__name__}{str(inspect.signature(func))}"
@@ -909,6 +950,15 @@ class _HookRelay:
             if self._needs_discovery:
                 self._manager.discover()
         return object.__getattribute__(self, name)
+
+    def __str__(self) -> str:
+        text = ''
+        for hookname, hookcaller in sorted(self.items(), key=lambda x: x[0]):
+            text += f'{hookname:25}  {len(hookcaller.get_hookimpls()):3} implementations\n'
+        return text
+
+    def __len__(self) -> int:
+        return len([k for k in vars(self) if not k.startswith("_")])
 
     def items(self) -> List[Tuple[str, HookCaller]]:
         """Iterate through hookcallers, removing private attributes."""
