@@ -46,13 +46,13 @@ HookResult
 
 
 HookSpecification
-========
+=================
 
 .. autoclass:: HookSpecification
    :members:
 
 HookImplementation
-========
+==================
 
 .. autoclass:: HookImplementation
    :members:
@@ -62,7 +62,7 @@ Decorators & Markers
 ====================
 
 HookSpecificationMarker
---------------
+-----------------------
 
 .. autoclass:: HookSpecificationMarker
    :members:
@@ -70,7 +70,7 @@ HookSpecificationMarker
    :exclude-members: __init__, __weakref__
 
 HookImplementationMarker
---------------
+------------------------
 
 .. autoclass:: HookImplementationMarker
    :members:
@@ -148,6 +148,8 @@ Extra Functions
 .. autofunction:: napari_plugin_engine.manager.ensure_namespace
 
 .. autofunction:: napari_plugin_engine.manager.temp_path_additions
+
+.. autofunction:: napari_plugin_engine.dist.get_dist
 
 
 Types

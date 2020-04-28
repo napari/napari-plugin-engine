@@ -28,6 +28,18 @@ def _object_to_top_level_module(obj: Any) -> Optional[str]:
 
 @lru_cache(maxsize=128)
 def get_dist(obj) -> Optional[importlib_metadata.Distribution]:
+    """Return a :class:`importlib.metadata.Distribution` for any python object.
+
+    Parameters
+    ----------
+    obj : Any
+        A python object
+
+    Returns
+    -------
+    dist: Distribution
+        The distribution object for the corresponding package, if found.
+    """
     top_level = _object_to_top_level_module(obj)
     return _top_level_module_to_dist().get(top_level or '')
 
@@ -91,6 +103,27 @@ def get_metadata(plugin, *args):  # noqa: F811
 
 
 def standard_metadata(plugin: Any) -> Dict[str, Optional[str]]:
+    """Return a standard metadata dict for ``plugin``.
+
+    Parameters
+    ----------
+    plugin : Any
+        A python object.
+
+    Returns
+    -------
+    metadata : dict
+        A  dicts with plugin object metadata. The dict is guaranteed to have
+        the following keys:
+
+        - **package**: The name of the package
+        - **version**: The version of the plugin package
+        - **summary**: A one-line summary of what the distribution does
+        - **author**: The author’s name
+        - **email**: The author’s (or maintainer's) e-mail address.
+        - **license**: The license covering the distribution
+        - **url**: The home page for the package, or dowload url if N/A.
+    """
     meta = {}
     if get_dist(plugin):
         meta = get_metadata(
