@@ -160,7 +160,7 @@ def _multicall(
     try:  # run impl and wrapper setup functions in a loop
         teardowns = []
         try:
-            for hook_impl in reversed(hook_impls):
+            for hook_impl in hook_impls:
                 # skip disabled hook implementations
                 if not getattr(hook_impl, 'enabled', True):
                     continue

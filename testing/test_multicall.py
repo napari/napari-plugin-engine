@@ -16,7 +16,7 @@ def multicall(methods, kwargs, firstresult=False):
     """utility function to execute the hook implementations loop"""
     caller = _multicall
     hookfuncs = []
-    for method in methods:
+    for method in reversed(methods):
         f = HookImplementation(method, **method.example_impl)
         hookfuncs.append(f)
     # our _multicall function returns our own HookResult object.

@@ -9,11 +9,20 @@ from .callers import HookCallError, HookResult, _multicall
 from .exceptions import PluginCallError
 from .implementation import HookImplementation, HookSpecification
 
+try:
+    from napari import config
+except ImportError:
+
+    class config:  # type: ignore
+        def set(*args, **kwargs):
+            pass
+
+
 HookExecFunc = Callable[
     ['HookCaller', List[HookImplementation], dict], HookResult
 ]
-"""A function that loops calling a list of :class:`~napari_plugin_engine.HookImplementation` s and
-returns a :class:`~napari_plugin_engine.HookResult`.
+"""A function that loops calling a list of :class:`~napari_plugin_engine.HookImplementation`
+and returns a :class:`~napari_plugin_engine.HookResult`.
 
 Parameters
 ----------
@@ -29,6 +38,16 @@ Returns
 result : HookResult
     The :class:`~napari_plugin_engine.HookResult` object resulting from the call loop.
 """
+
+
+def sort_like_list(array):
+    def sorter(x):
+        try:
+            return array.index(x)
+        except (ValueError, IndexError):
+            return float("inf")
+
+    return sorter
 
 
 class HookCaller:
@@ -84,6 +103,8 @@ class HookCaller:
         self._wrappers: List[HookImplementation] = []
         self._nonwrappers: List[HookImplementation] = []
         self._hookexec = hook_execute
+        self._call_order: List[str] = []
+
         self.argnames = None
         self.kwargnames = None
         self.multicall = _multicall
@@ -145,6 +166,14 @@ class HookCaller:
     def __repr__(self) -> str:
         return f"<HookCaller {self.name}>"
 
+    def _ordered_impls(self, hookimpls: List[HookImplementation] = None):
+        impls = hookimpls or self.get_hookimpls()
+        if self._call_order:
+            return list(sorted(impls, key=sort_like_list(self._call_order)))
+        else:
+            # preserve old pluggy behavior for now
+            return list(reversed(impls))
+
     def call_historic(self, result_callback=None, kwargs=None):
         """Call the hook with given ``kwargs`` for all registered plugins and
         for all plugins which will be registered afterwards.
@@ -154,7 +183,7 @@ class HookCaller:
         """
         self._call_history.append((kwargs or {}, result_callback))
         # historizing hooks don't return results
-        res = self._hookexec(self, self.get_hookimpls(), kwargs).result
+        res = self._hookexec(self, self._ordered_impls(), kwargs).result
         if result_callback is None:
             return
         # XXX: remember firstresult isn't compat with historic
@@ -207,6 +236,14 @@ class HookCaller:
                 "argument provided to index must either be the "
                 "(string) name of a plugin, or a HookImplementation instance"
             )
+
+    @property
+    def call_order(self):
+        return self._call_order
+
+    @call_order.setter
+    def call_order(self, val: List[str]):
+        self._call_order = val
 
     def bring_to_front(
         self, new_order: Union[List[str], List[HookImplementation]]
@@ -322,6 +359,13 @@ class HookCaller:
 
         # update the _nonwrappers list with the reordered list
         self._nonwrappers = _new_nonwrappers
+        config.set(
+            {
+                f'plugins.hooks.{self.name}.call_order': [
+                    i.plugin_name for i in reversed(_new_nonwrappers)
+                ]
+            }
+        )
 
     def _set_plugin_enabled(self, plugin_name: str, enabled: bool):
         """Enable or disable the hook implementation for a specific plugin.
@@ -444,7 +488,7 @@ class HookCaller:
         #     )
         self._check_call_kwargs(kwargs)
         impls = [imp for imp in self.get_hookimpls() if imp not in _skip_impls]
-        return self._hookexec(self, impls, kwargs)
+        return self._hookexec(self, self._ordered_impls(impls), kwargs)
 
     def __call__(
         self,
