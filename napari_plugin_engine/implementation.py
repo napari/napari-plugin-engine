@@ -1,6 +1,7 @@
 import inspect
 import sys
-from typing import Callable, Optional, Any
+from typing import Callable, Optional, Any, List
+from .config import config
 
 
 class HookImplementation:
@@ -12,7 +13,7 @@ class HookImplementation:
         self,
         function: Callable,
         plugin: Optional[Any] = None,
-        plugin_name: Optional[str] = None,
+        plugin_name: str = '',
         hookwrapper: bool = False,
         optionalhook: bool = False,
         tryfirst: bool = False,
@@ -29,7 +30,34 @@ class HookImplementation:
         self.tryfirst = tryfirst
         self.trylast = trylast
         self._specname = specname
-        self.enabled = enabled
+        self._key = f"plugin_manager.hooks.{self.specname}.disabled_plugins"
+        self._enabled = enabled
+
+    @property
+    def enabled(self):
+        if self.plugin_name in config.get(self._key, []):
+            return False
+        else:
+            return self._enabled
+
+    @enabled.setter
+    def enabled(self, val: bool):
+        if val == self._enabled:
+            return
+        self._enabled = val
+        disabled: List[str] = list(config.get(self._key, []))
+        if not val:
+            disabled = list(set(disabled + [self.plugin_name]))
+        else:
+            try:
+                disabled.remove(self.plugin_name)
+            except ValueError:
+                pass
+        # if there's nothing left, clean up the key entirely
+        if disabled:
+            config.set({self._key: disabled})
+        else:
+            config.pop(self._key)
 
     @classmethod
     def format_tag(cls, project_name):
