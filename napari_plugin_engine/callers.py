@@ -4,6 +4,7 @@ from types import TracebackType
 from typing import Any, List, Optional, Tuple, Union, Type
 from .exceptions import PluginCallError, HookCallError
 from .implementation import HookImplementation
+from .config import config
 
 
 def _raise_wrapfail(wrap_controller, msg):
@@ -157,12 +158,18 @@ def _multicall(
     results = []
     errors: List['PluginCallError'] = []
     excinfo: Optional[ExcInfo] = None
+    if hook_impls:
+        disabled: List[str] = config.get(
+            f"plugin_manager.hooks.{hook_impls[0].specname}.disabled", []
+        )
     try:  # run impl and wrapper setup functions in a loop
         teardowns = []
         try:
             for hook_impl in hook_impls:
                 # skip disabled hook implementations
                 if not getattr(hook_impl, 'enabled', True):
+                    continue
+                if hook_impl.plugin_name in disabled:
                     continue
                 args: List[Any] = []
                 try:

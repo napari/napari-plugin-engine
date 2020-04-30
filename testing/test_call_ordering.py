@@ -54,7 +54,6 @@ def dummy_plugin_manager():
 
 
 # p2 is first because it was declared with tryfirst=True
-# p3 is second because of "last-in-first-out" order
 START_ORDER = ['p2', 'p3', 'p1']
 
 
@@ -76,15 +75,15 @@ def test_reordering_hook_caller(dummy_plugin_manager, order, expected_result):
     hook_caller = dummy_plugin_manager.hooks.myhook
 
     assert hook_caller() == START_ORDER
-    hook_caller.bring_to_front(order)
+    hook_caller.call_order = order
     assert hook_caller() == expected_result
     # return to original order
-    hook_caller.bring_to_front(START_ORDER)
+    hook_caller.call_order = START_ORDER
     assert hook_caller() == START_ORDER
 
     # try again using HookImplementation INSTANCES instead of plugin names
     instances = [hook_caller.get_plugin_implementation(i) for i in order]
-    hook_caller.bring_to_front(instances)
+    hook_caller.call_order = instances
     assert hook_caller() == expected_result
 
 
@@ -94,28 +93,19 @@ def test_reordering_hook_caller_raises(dummy_plugin_manager):
 
     with pytest.raises(TypeError):
         # all items must be the name of a plugin, or a HookImplementation instance
-        hook_caller.bring_to_front([1, 2])
-
-    with pytest.raises(ValueError):
-        # 'wrapper' is the name of a plugin that provides an implementation...
-        # but it is a hookwrappers which is not valid for `bring_to_front`
-        hook_caller.bring_to_front(['p1', 'wrapper'])
-
-    with pytest.raises(ValueError):
-        # 'p4' is not in the list
-        hook_caller.bring_to_front(['p1', 'p4'])
+        hook_caller.call_order = [1, 2]
 
     with pytest.raises(ValueError):
         # duplicate entries are not allowed
-        hook_caller.bring_to_front(['p1', 'p1', 'p2'])
+        hook_caller.call_order = ['p1', 'p1', 'p2']
 
     with pytest.raises(ValueError):
         # too many values
-        hook_caller.bring_to_front(['p1', 'p1', 'p2', 'p4', 'p3', 'p1'])
+        hook_caller.call_order = ['p1', 'p1', 'p2', 'p4', 'p3', 'p1']
 
     with pytest.raises(TypeError):
         # it has to be a list
-        hook_caller.bring_to_front('p1')
+        hook_caller.call_order = 'p1'
 
 
 def test_hook_caller_kwargs(dummy_plugin_manager):

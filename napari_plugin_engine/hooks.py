@@ -8,14 +8,7 @@ from typing import Any, Callable, List, Optional, Union
 from .callers import HookCallError, HookResult, _multicall
 from .exceptions import PluginCallError
 from .implementation import HookImplementation, HookSpecification
-
-try:
-    from napari import config
-except ImportError:
-
-    class config:  # type: ignore
-        def set(*args, **kwargs):
-            pass
+from .config import config
 
 
 HookExecFunc = Callable[
@@ -29,23 +22,28 @@ Parameters
 hook_caller : HookCaller
     a :class:`HookCaller` instance.
 hook_impls : List[HookImplementation]
-    a list of :class:`~napari_plugin_engine.HookImplementation` instances to call.
+    a list of :class:`~napari_plugin_engine.HookImplementation` instances to
+    call.
 kwargs : dict
     a mapping of keyword arguments to provide to the implementation.
 
 Returns
 -------
 result : HookResult
-    The :class:`~napari_plugin_engine.HookResult` object resulting from the call loop.
+    The :class:`~napari_plugin_engine.HookResult` object resulting from the
+    call loop.
 """
 
 
-def sort_like_list(array):
-    def sorter(x):
+def sort_like_list(array: List[str]):
+    """Return a function that can sort a list of hookimpls base on plugin name.
+    """
+
+    def sorter(x: HookImplementation) -> int:
         try:
-            return array.index(x)
-        except (ValueError, IndexError):
-            return float("inf")
+            return array.index(x.plugin_name)  # type: ignore
+        except ValueError:
+            return 99999999999
 
     return sorter
 
@@ -64,14 +62,14 @@ class HookCaller:
        # assuming `some_module` had an @hookspec named `my specification`
        assert isinstance(pm.hook.my_specification, HookCaller)
 
-    Each ``HookCaller`` instance stores all of the :class:`HookImplementation` objects
-    discovered during :meth:`plugin registration <PluginManager.register>`
-    (each of which capture the implementation of a specific plugin for this
-    hook specification).
+    Each ``HookCaller`` instance stores all of the :class:`HookImplementation`
+    objects discovered during :meth:`plugin registration
+    <PluginManager.register>` (each of which capture the implementation of a
+    specific plugin for this hook specification).
 
     The ``HookCaller`` instance also usually creates and stores a reference to
-    the :class:`HookSpecification` instance that encapsulates information about the hook
-    specification, (at ``HookCaller.spec``)
+    the :class:`HookSpecification` instance that encapsulates information about
+    the hook specification, (at ``HookCaller.spec``)
 
     Parameters
     ----------
@@ -84,12 +82,12 @@ class HookCaller:
         :meth:`PluginManager._hookexec`... which is, in turn, mostly just a
         wrapper around :func:`._multicall`.
     namespace : Any, optional
-        An namespace (such as a module or class) to search during `HookSpecification`
-        creation for functions decorated with ``@hookspec`` named with the
-        string ``name``.
+        An namespace (such as a module or class) to search during
+        `HookSpecification` creation for functions decorated with ``@hookspec``
+        named with the string ``name``.
     spec_opts : Optional[dict], optional
-        keyword arguments to be passed when creating the :class:`HookSpecification`
-        instance at ``self.spec``.
+        keyword arguments to be passed when creating the
+        :class:`HookSpecification` instance at ``self.spec``.
     """
 
     def __init__(
@@ -103,7 +101,9 @@ class HookCaller:
         self._wrappers: List[HookImplementation] = []
         self._nonwrappers: List[HookImplementation] = []
         self._hookexec = hook_execute
-        self._call_order: List[str] = []
+        self._call_order: List[str] = config.get(
+            f'plugin_manager.hooks.{self.name}.call_order', []
+        )
 
         self.argnames = None
         self.kwargnames = None
@@ -142,7 +142,7 @@ class HookCaller:
 
     def get_hookimpls(self) -> List[HookImplementation]:
         # Order is important for _hookexec
-        return self._nonwrappers + self._wrappers
+        return self._order_impls(self._nonwrappers + self._wrappers)
 
     def _add_hookimpl(self, hookimpl: HookImplementation):
         """Add an implementation to the callback chain.
@@ -166,14 +166,6 @@ class HookCaller:
     def __repr__(self) -> str:
         return f"<HookCaller {self.name}>"
 
-    def _ordered_impls(self, hookimpls: List[HookImplementation] = None):
-        impls = hookimpls or self.get_hookimpls()
-        if self._call_order:
-            return list(sorted(impls, key=sort_like_list(self._call_order)))
-        else:
-            # preserve old pluggy behavior for now
-            return list(reversed(impls))
-
     def call_historic(self, result_callback=None, kwargs=None):
         """Call the hook with given ``kwargs`` for all registered plugins and
         for all plugins which will be registered afterwards.
@@ -183,7 +175,7 @@ class HookCaller:
         """
         self._call_history.append((kwargs or {}, result_callback))
         # historizing hooks don't return results
-        res = self._hookexec(self, self._ordered_impls(), kwargs).result
+        res = self._hookexec(self, self.get_hookimpls(), kwargs).result
         if result_callback is None:
             return
         # XXX: remember firstresult isn't compat with historic
@@ -225,7 +217,8 @@ class HookCaller:
             )
 
     def index(self, value: Union[str, HookImplementation]) -> int:
-        """Return index of plugin_name or a HookImplementation in self._nonwrappers"""
+        """Return index of plugin_name or a HookImpl in self._nonwrappers.
+        """
         if isinstance(value, HookImplementation):
             return self._nonwrappers.index(value)
         elif isinstance(value, str):
@@ -242,130 +235,150 @@ class HookCaller:
         return self._call_order
 
     @call_order.setter
-    def call_order(self, val: List[str]):
-        self._call_order = val
-
-    def bring_to_front(
-        self, new_order: Union[List[str], List[HookImplementation]]
-    ):
-        """Move items in ``new_order`` to the front of the call order.
-
-        By default, hook implementations are called in last-in-first-out order
-        of registration, and pluggy does not provide a built-in way to
-        rearrange the call order of hook implementations.
-
-        This function accepts a :class:`HookCaller` instance and the desired
-        ``new_order`` of the hook implementations (in the form of list of
-        plugin names, or a list of actual :class:`HookImplementation`
-        instances) and reorders the implementations in the hook caller
-        accordingly.
-
-        .. note::
-
-           Hook implementations are actually stored in *two* separate list
-           attributes in the hook caller: :attr:`HookCaller._wrappers` and
-           :attr:`HookCaller._nonwrappers`, according to whether the
-           corresponding :class:`HookImplementation` instance was marked as a
-           wrapper or not. This method *only* sorts _nonwrappers.
-
-        Parameters
-        ----------
-        new_order :  list of str or list of :class:`HookImplementation`
-            instances The desired CALL ORDER of the hook implementations.  The
-            list does *not* need to include every hook implementation in
-            :meth:`get_hookimpls`, but those that are not included will be left
-            at the end of the call order.
-
-        Raises
-        ------
-        TypeError
-            If any item in ``new_order`` is neither a string (plugin_name) or a
-            ``HookImplementation`` instance.
-        ValueError
-            If any item in ``new_order`` is neither the name of a plugin or a
-            ``HookImplementation`` instance that is present in self._nonwrappers.
-        ValueError
-            If ``new_order`` argument has multiple entries for the same
-            implementation.
-
-        Examples
-        --------
-        Imagine you had a hook specification named ``print_plugin_name``, that
-        expected plugins to simply print their own name. An implementation
-        might look like:
-
-        >>> # hook implementation for ``plugin_1``
-        >>> @hook_implementation
-        ... def print_plugin_name():
-        ...     print("plugin_1")
-
-        If three different plugins provided hook implementations. An example
-        call for that hook might look like:
-
-        >>> plugin_manager.hook.print_plugin_name()
-        plugin_1
-        plugin_2
-        plugin_3
-
-        If you wanted to rearrange their call order, you could do this:
-
-        >>> new_order = ["plugin_2", "plugin_3", "plugin_1"]
-        >>> plugin_manager.hook.print_plugin_name.bring_to_front(new_order)
-        >>> plugin_manager.hook.print_plugin_name()
-        plugin_2
-        plugin_3
-        plugin_1
-
-        You can also just specify one or more item to move them to the front
-        of the call order:
-        >>> plugin_manager.hook.print_plugin_name.bring_to_front(["plugin_3"])
-        >>> plugin_manager.hook.print_plugin_name()
-        plugin_3
-        plugin_2
-        plugin_1
-        """
-
-        if not isinstance(new_order, Sequence) or isinstance(new_order, str):
+    def call_order(self, val: Union[List[str], List[HookImplementation]]):
+        if not isinstance(val, Sequence) or isinstance(val, str):
             raise TypeError(
                 'The first argument to "bring_to_front" '
                 'must be a non-string sequence type.'
             )
 
         # make sure items in order are unique
-        if len(new_order) != len(set(new_order)):
+        if len(val) != len(set(val)):
             raise ValueError("repeated item in order")
 
-        # make new lists for the rearranged _nonwrappers
-        # for details on the difference between wrappers and nonwrappers, see:
-        # https://pluggy.readthedocs.io/en/latest/#wrappers
-        _old_nonwrappers = self._nonwrappers.copy()
-        _new_nonwrappers: List[HookImplementation] = []
-        indices = [self.index(elem) for elem in new_order]
-        for i in indices:
-            # inserting because they get called in reverse order.
-            _new_nonwrappers.insert(0, _old_nonwrappers[i])
+        if all(isinstance(i, HookImplementation) for i in val):
+            val = [i.plugin_name for i in val]  # type: ignore
+        if not all(isinstance(i, str) for i in val):
+            raise TypeError(
+                "All values must be either strings or HookImplementations"
+            )
+        self._call_order = val  # type: ignore
+        config.set({f'plugin_manager.hooks.{self.name}.call_order': val})
 
-        # remove items that have been pulled, leaving only items that
-        # were not specified in ``new_order`` argument
-        # do this rather than using .pop() above to avoid changing indices
-        for i in sorted(indices, reverse=True):
-            del _old_nonwrappers[i]
+    def _order_impls(
+        self, hookimpls: List[HookImplementation]
+    ) -> List[HookImplementation]:
+        # preserve old pluggy behavior for now
+        _rev = reversed(hookimpls)
+        if self.call_order:
+            return list(sorted(_rev, key=sort_like_list(self.call_order)))
+        else:
+            return list(_rev)
 
-        # if there are any hook_implementations left over, add them to the
-        # beginning of their respective lists (because at call time, these
-        # lists are called in reverse order)
-        if _old_nonwrappers:
-            _new_nonwrappers = [x for x in _old_nonwrappers] + _new_nonwrappers
+    # def bring_to_front(
+    #     self, new_order: Union[List[str], List[HookImplementation]]
+    # ):
+    #     """Move items in ``new_order`` to the front of the call order.
 
-        # update the _nonwrappers list with the reordered list
-        self._nonwrappers = _new_nonwrappers
-        config.set(
-            {
-                f'plugins.hooks.{self.name}.call_order': [
-                    i.plugin_name for i in reversed(_new_nonwrappers)
-                ]
-            }
-        )
+    #     By default, hook implementations are called in last-in-first-out order
+    #     of registration, and pluggy does not provide a built-in way to
+    #     rearrange the call order of hook implementations.
+
+    #     This function accepts a :class:`HookCaller` instance and the desired
+    #     ``new_order`` of the hook implementations (in the form of list of
+    #     plugin names, or a list of actual :class:`HookImplementation`
+    #     instances) and reorders the implementations in the hook caller
+    #     accordingly.
+
+    #     .. note::
+
+    #        Hook implementations are actually stored in *two* separate list
+    #        attributes in the hook caller: :attr:`HookCaller._wrappers` and
+    #        :attr:`HookCaller._nonwrappers`, according to whether the
+    #        corresponding :class:`HookImplementation` instance was marked as a
+    #        wrapper or not. This method *only* sorts _nonwrappers.
+
+    #     Parameters
+    #     ----------
+    #     new_order :  list of str or list of :class:`HookImplementation`
+    #         instances The desired CALL ORDER of the hook implementations.  The
+    #         list does *not* need to include every hook implementation in
+    #         :meth:`get_hookimpls`, but those that are not included will be left
+    #         at the end of the call order.
+
+    #     Raises
+    #     ------
+    #     TypeError
+    #         If any item in ``new_order`` is neither a string (plugin_name) or a
+    #         ``HookImplementation`` instance.
+    #     ValueError
+    #         If any item in ``new_order`` is neither the name of a plugin or a
+    #         ``HookImplementation`` instance that is present in self._nonwrappers.
+    #     ValueError
+    #         If ``new_order`` argument has multiple entries for the same
+    #         implementation.
+
+    #     Examples
+    #     --------
+    #     Imagine you had a hook specification named ``print_plugin_name``, that
+    #     expected plugins to simply print their own name. An implementation
+    #     might look like:
+
+    #     >>> # hook implementation for ``plugin_1``
+    #     >>> @hook_implementation
+    #     ... def print_plugin_name():
+    #     ...     print("plugin_1")
+
+    #     If three different plugins provided hook implementations. An example
+    #     call for that hook might look like:
+
+    #     >>> plugin_manager.hook.print_plugin_name()
+    #     plugin_1
+    #     plugin_2
+    #     plugin_3
+
+    #     If you wanted to rearrange their call order, you could do this:
+
+    #     >>> new_order = ["plugin_2", "plugin_3", "plugin_1"]
+    #     >>> plugin_manager.hook.print_plugin_name.bring_to_front(new_order)
+    #     >>> plugin_manager.hook.print_plugin_name()
+    #     plugin_2
+    #     plugin_3
+    #     plugin_1
+
+    #     You can also just specify one or more item to move them to the front
+    #     of the call order:
+    #     >>> plugin_manager.hook.print_plugin_name.bring_to_front(["plugin_3"])
+    #     >>> plugin_manager.hook.print_plugin_name()
+    #     plugin_3
+    #     plugin_2
+    #     plugin_1
+    #     """
+
+    #     if not isinstance(new_order, Sequence) or isinstance(new_order, str):
+    #         raise TypeError(
+    #             'The first argument to "bring_to_front" '
+    #             'must be a non-string sequence type.'
+    #         )
+
+    #     # make sure items in order are unique
+    #     if len(new_order) != len(set(new_order)):
+    #         raise ValueError("repeated item in order")
+
+    #     # make new lists for the rearranged _nonwrappers
+    #     # for details on the difference between wrappers and nonwrappers, see:
+    #     # https://pluggy.readthedocs.io/en/latest/#wrappers
+    #     _old_nonwrappers = self._nonwrappers.copy()
+    #     _new_nonwrappers: List[HookImplementation] = []
+    #     indices = [self.index(elem) for elem in new_order]
+    #     for i in indices:
+    #         # inserting because they get called in reverse order.
+    #         _new_nonwrappers.insert(0, _old_nonwrappers[i])
+
+    #     # remove items that have been pulled, leaving only items that
+    #     # were not specified in ``new_order`` argument
+    #     # do this rather than using .pop() above to avoid changing indices
+    #     for i in sorted(indices, reverse=True):
+    #         del _old_nonwrappers[i]
+
+    #     # if there are any hook_implementations left over, add them to the
+    #     # beginning of their respective lists (because at call time, these
+    #     # lists are called in reverse order)
+    #     if _old_nonwrappers:
+    #         _new_nonwrappers = [x for x in _old_nonwrappers] + _new_nonwrappers
+
+    #     # update the _nonwrappers list with the reordered list
+    #     self._nonwrappers = _new_nonwrappers
 
     def _set_plugin_enabled(self, plugin_name: str, enabled: bool):
         """Enable or disable the hook implementation for a specific plugin.
@@ -488,7 +501,7 @@ class HookCaller:
         #     )
         self._check_call_kwargs(kwargs)
         impls = [imp for imp in self.get_hookimpls() if imp not in _skip_impls]
-        return self._hookexec(self, self._ordered_impls(impls), kwargs)
+        return self._hookexec(self, impls, kwargs)
 
     def __call__(
         self,
