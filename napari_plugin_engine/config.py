@@ -7,4 +7,7 @@ except ImportError:
             pass
 
         def get(*args, **kwargs):
-            pass
+            return dict().get(*args, **kwargs)
+
+        def pop(*args, **kwargs):
+            return None
