@@ -1,4 +1,7 @@
 try:
+    # if napari_plugin_engine is imported before napari, we have a circular
+    # import problem
+
     from napari import config
 except ImportError:
 

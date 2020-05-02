@@ -30,12 +30,14 @@ class HookImplementation:
         self.tryfirst = tryfirst
         self.trylast = trylast
         self._specname = specname
-        self._key = f"plugin_manager.hooks.{self.specname}.disabled_plugins"
+        self._config_key = (
+            f"plugin_manager.hooks.{self.specname}.disabled_plugins"
+        )
         self._enabled = enabled
 
     @property
     def enabled(self):
-        if self.plugin_name in config.get(self._key, []):
+        if self.plugin_name in (config.get(self._config_key, []) or []):
             return False
         else:
             return self._enabled
@@ -45,7 +47,7 @@ class HookImplementation:
         if val == self._enabled:
             return
         self._enabled = val
-        disabled: List[str] = list(config.get(self._key, []))
+        disabled: List[str] = list(config.get(self._config_key, []) or [])
         if not val:
             disabled = list(set(disabled + [self.plugin_name]))
         else:
@@ -55,9 +57,9 @@ class HookImplementation:
                 pass
         # if there's nothing left, clean up the key entirely
         if disabled:
-            config.set({self._key: disabled})
+            config.set({self._config_key: disabled})
         else:
-            config.pop(self._key)
+            config.pop(self._config_key)
 
     @classmethod
     def format_tag(cls, project_name):
@@ -85,9 +87,10 @@ class HookImplementation:
             if getattr(self, attr)
         ]
         suffix = (' ' + " ".join(truthy)) if truthy else ''
+        disabled = not self.enabled
         return (
-            f"<HookImplementation plugin={self.plugin_name!r}"
-            f" spec={self.specname!r}{suffix}>"
+            f"<HookImplementation plugin={self.plugin_name!r} spec="
+            f"{self.specname!r}{suffix}{' DISABLED' if disabled else ''}>"
         )
 
     def __call__(self, *args):

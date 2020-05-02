@@ -101,10 +101,7 @@ class HookCaller:
         self._wrappers: List[HookImplementation] = []
         self._nonwrappers: List[HookImplementation] = []
         self._hookexec = hook_execute
-        self._call_order: List[str] = config.get(
-            f'plugin_manager.hooks.{self.name}.call_order', []
-        )
-
+        self._call_order: List[str] = []
         self.argnames = None
         self.kwargnames = None
         self.multicall = _multicall
@@ -112,6 +109,8 @@ class HookCaller:
         if namespace is not None:
             assert spec_opts is not None
             self.set_specification(namespace, spec_opts)
+
+        self._config_key = f'plugin_manager.hooks.{self.name}.call_order'
 
     def has_spec(self) -> bool:
         return self.spec is not None
@@ -232,7 +231,7 @@ class HookCaller:
 
     @property
     def call_order(self):
-        return self._call_order
+        return config.get(self._config_key, []) or self._call_order
 
     @call_order.setter
     def call_order(self, val: Union[List[str], List[HookImplementation]]):
@@ -253,7 +252,7 @@ class HookCaller:
                 "All values must be either strings or HookImplementations"
             )
         self._call_order = val  # type: ignore
-        config.set({f'plugin_manager.hooks.{self.name}.call_order': val})
+        config.set({self._config_key: val})
 
     def _order_impls(
         self, hookimpls: List[HookImplementation]
