@@ -54,6 +54,7 @@ def add_implementation(test_plugin_manager):
         tryfirst=False,
         trylast=False,
         hookwrapper=False,
+        plugin_name='',
     ):
         def wrap(func):
             project = test_plugin_manager.project_name
@@ -67,7 +68,9 @@ def add_implementation(test_plugin_manager):
             hook_caller = getattr(test_plugin_manager.hook, _specname, None)
             assert hook_caller, f"No hook with with name: {_specname}"
             opts = getattr(func, HookImplementation.format_tag(project))
-            hook_caller._add_hookimpl(HookImplementation(func, **opts))
+            hook_caller._add_hookimpl(
+                HookImplementation(func, plugin_name=plugin_name, **opts)
+            )
             return func
 
         return wrap(function) if function is not None else wrap
