@@ -1,6 +1,7 @@
-from types import TracebackType
-from typing import Optional, Union, Type, TYPE_CHECKING, List, Tuple, Any
 import logging
+from types import TracebackType
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
+
 from .dist import standard_metadata
 
 if TYPE_CHECKING:
@@ -101,10 +102,24 @@ class PluginError(Exception):
         return errors
 
     def format(self, package_info: bool = True):
-        msg = f'PluginError: {self}\n'
+        msg = f'PluginError: {self}'
         if self.__cause__:
-            cause = str(self.__cause__).replace("\n", "\n" + " " * 13)
+            msg = msg.replace(str(self.__cause__), '').strip(": ") + "\n"
+            cause = repr(self.__cause__).replace("\n", "\n" + " " * 13)
             msg += f'  Cause was: {cause}'
+
+            # show the exact file and line where the error occured
+            cause_tb = self.__cause__.__traceback__
+            if cause_tb:
+                while True:
+                    if not cause_tb.tb_next:
+                        break
+                    cause_tb = cause_tb.tb_next
+
+                msg += f'\n    in file: {cause_tb.tb_frame.f_code.co_filename}'
+                msg += f'\n    at line: {cause_tb.tb_lineno}'
+        else:
+            msg += "\n"
 
         if package_info and self.plugin:
             meta = standard_metadata(self.plugin)
@@ -112,7 +127,7 @@ class PluginError(Exception):
             meta.pop('summary', None)
             if meta:
                 msg += "\n" + "\n".join(
-                    [f'{k: >11}: {v}' for k, v in meta.items() if v]
+                    [f'{k: >11}: {v}' for k, v in sorted(meta.items()) if v]
                 )
         msg += '\n'
         return msg

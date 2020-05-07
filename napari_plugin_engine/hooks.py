@@ -191,8 +191,8 @@ class HookCaller:
             )
         except StopIteration:
             raise KeyError(
-                f"No implementation of {self.name} found "
-                f"for plugin {plugin_name}."
+                f"No implementation of {self.name!r} found "
+                f"for plugin {plugin_name!r}."
             )
 
     def index(self, value: Union[str, HookImplementation]) -> int:
