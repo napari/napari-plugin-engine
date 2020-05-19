@@ -1,7 +1,7 @@
 import inspect
 import sys
 from typing import Callable, Optional, Any, List
-from .config import config
+from .config import napari_config
 
 
 class HookImplementation:
@@ -37,7 +37,7 @@ class HookImplementation:
 
     @property
     def enabled(self):
-        if self.plugin_name in (config.get(self._config_key, []) or []):
+        if self.plugin_name in (napari_config.get(self._config_key, []) or []):
             return False
         else:
             return self._enabled
@@ -47,7 +47,9 @@ class HookImplementation:
         if val == self._enabled:
             return
         self._enabled = val
-        disabled: List[str] = list(config.get(self._config_key, []) or [])
+        disabled: List[str] = list(
+            napari_config.get(self._config_key, []) or []
+        )
         if not val:
             disabled = list(set(disabled + [self.plugin_name]))
         else:
@@ -57,9 +59,9 @@ class HookImplementation:
                 pass
         # if there's nothing left, clean up the key entirely
         if disabled:
-            config.set({self._config_key: disabled})
+            napari_config.set({self._config_key: disabled})
         else:
-            config.pop(self._config_key)
+            napari_config.pop(self._config_key)
 
     @classmethod
     def format_tag(cls, project_name):
