@@ -203,6 +203,7 @@ class PluginManager:
             )
             return 0, []
 
+        _top_level_module_to_dist.cache_clear()
         errs: List[PluginError] = []
         with temp_path_additions(path):
             count = 0
@@ -575,6 +576,17 @@ class PluginManager:
             hookcaller._remove_plugin(plugin)
 
         return plugin
+
+    def prune(self):
+        """Unregister modules that can no longer be imported.
+
+        Useful if pip uninstall has been run during the session.
+        """
+        for plugin_module in list(self.plugins.values()):
+            try:
+                importlib.reload(plugin_module)
+            except ModuleNotFoundError:
+                self.unregister(plugin_module)
 
     def _add_hookspec_dict(self, dct: Dict[str, Callable], **kwargs):
         mark = HookSpecificationMarker(self.project_name)
