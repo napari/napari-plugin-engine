@@ -31,8 +31,8 @@ def get_dist(obj) -> Optional[importlib_metadata.Distribution]:
 
     Parameters
     ----------
-    obj : Any or str
-        A python object.  If a string, will be interpreted as the dist name.
+    obj : Any
+        A python object. If a string, will be interpreted as a dist name.
 
     Returns
     -------
@@ -112,7 +112,7 @@ def standard_metadata(plugin: Any) -> Dict[str, Optional[str]]:
     Parameters
     ----------
     plugin : Any
-        A python object.
+        A python object.  If a string, will be interpreted as a dist name.
 
     Returns
     -------
@@ -127,6 +127,11 @@ def standard_metadata(plugin: Any) -> Dict[str, Optional[str]]:
         - **email**: The author’s (or maintainer's) e-mail address.
         - **license**: The license covering the distribution
         - **url**: The home page for the package, or dowload url if N/A.
+
+    Raises
+    ------
+    ValueError
+        If no distribution can be found for ``plugin``.
     """
     meta = {}
     if not get_dist(plugin):

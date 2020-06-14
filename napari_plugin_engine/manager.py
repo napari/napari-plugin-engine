@@ -66,7 +66,7 @@ class PluginManager:
     discover_prefix : str, optional
         The default module prefix to use when discovering plugins with
         :meth:`PluginManager.discover`, by default None
-    discover_prefix : str or list of str, optional
+    discover_path : str or list of str, optional
         A path or paths to include when discovering plugins with
         :meth:`PluginManager.discover`, by default None
 
@@ -80,7 +80,7 @@ class PluginManager:
 
         plugin_manager = PluginManager(
             'my_project',
-            discovert_entry_point='app.plugin',
+            discover_entry_point='app.plugin',
             discover_prefix='app_',
         )
         plugin_manager.add_hookspecs(my_hookspecs)
@@ -161,7 +161,8 @@ class PluginManager:
     ) -> Generator[Tuple[str, str, Optional[str]], None, None]:
         """Iterate over available plugins.
 
-        See :func:`iter_available_plugins` for details."""
+        See docstring of :func:`iter_available_plugins` for details.
+        """
         yield from iter_available_plugins(
             self.discover_entry_point,
             self.discover_prefix,
