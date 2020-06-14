@@ -125,9 +125,11 @@ def full_plugin_manager(
     def test_specification(arg1, arg2):
         ...
 
-    cnt, err = test_plugin_manager.discover(
-        tmp_path, entry_point='app.plugin', prefix='app_'
-    )
+    test_plugin_manager.discover_entry_point = 'app.plugin'
+    test_plugin_manager.discover_prefix = 'app_'
+    test_plugin_manager.discover_path = tmp_path
+
+    cnt, err = test_plugin_manager.discover()
     assert cnt == 4
     assert len(err) == 2
     return test_plugin_manager
@@ -142,30 +144,35 @@ def test_plugin_meta(
     double_convention_plugin,
 ):
 
-    cnt, err = test_plugin_manager.discover(
-        tmp_path, entry_point='app.plugin', prefix='app_'
-    )
-    assert set(test_plugin_manager.plugins) == {
-        'double_a',
-        'double_b',
-        'good_entry',
-        'app_good_plugin',
-    }
+    test_plugin_manager.discover_entry_point = 'app.plugin'
+    test_plugin_manager.discover_prefix = 'app_'
 
-    versions = {
-        'double_a': '3.2.1',
-        'double_b': '3.2.1',
-        'good_entry': '1.2.3',
-        'app_good_plugin': '',
-    }
-    for name, plug in test_plugin_manager.plugins.items():
-        assert versions[name] == get_version(plug)
-        if name == 'app_good_plugin':
-            # this one doesn't have any metadata.. but it will have plugin_name
-            meta = standard_metadata(plug)
-            assert not any(meta.values())
-        else:
-            assert get_version(plug) == standard_metadata(plug).get('version')
+    with temp_path_additions(tmp_path):
+
+        cnt, err = test_plugin_manager.discover()
+        assert set(test_plugin_manager.plugins) == {
+            'double_a',
+            'double_b',
+            'good_entry',
+            'app_good_plugin',
+        }
+
+        versions = {
+            'double_a': '3.2.1',
+            'double_b': '3.2.1',
+            'good_entry': '1.2.3',
+            'app_good_plugin': '',
+        }
+        for name, plug in test_plugin_manager.plugins.items():
+            assert versions[name] == get_version(plug)
+            if name == 'app_good_plugin':
+                # this one doesn't have any metadata.. but it will have plugin_name
+                with pytest.raises(ValueError):
+                    standard_metadata(plug)
+            else:
+                assert get_version(plug) == standard_metadata(plug).get(
+                    'version'
+                )
 
 
 @pytest.mark.parametrize(
@@ -193,33 +200,37 @@ def test_double_convention(
         ...
 
     assert not test_plugin_manager.plugins
-    with temp_path_additions(tmp_path):
-        cnt, _ = test_plugin_manager.discover(**regkwargs)
-        hook_caller = test_plugin_manager.hook.test_specification
-        plugin_names = list(test_plugin_manager.plugins.keys())
-        if regkwargs:
-            if 'entry_point' in regkwargs:
-                # if an entry_point with a matching group is provided
-                # the plugin will be named after the entrypoint name
-                assert 'double_a' in plugin_names
-                assert 'double_b' in plugin_names
-                assert 'double-package' not in test_plugin_manager.plugins
-                assert len(hook_caller.get_hookimpls()) == 2
-            else:  # just prefix
-                # if entry point discovery is disabled, but a dist-info folder
-                # for the package is found, then the plugin will be named using
-                # the package `Name` key in the METADATA file.
-                assert 'double-package' in plugin_names
-                # however, in this case, there are no implementations in the
-                # top level module (which is the only way naming convention
-                # works)
-                assert len(hook_caller.get_hookimpls()) == 0
-            # (name convention modules that do not have associated METADATA will
-            # just be named after the module)
-        else:
-            assert cnt == 0
-            assert not hook_caller.get_hookimpls()
-            assert 'double' not in plugin_names
+
+    if 'entry_point' in regkwargs:
+        test_plugin_manager.discover_entry_point = regkwargs['entry_point']
+    if 'prefix' in regkwargs:
+        test_plugin_manager.discover_prefix = regkwargs['prefix']
+    test_plugin_manager.discover_path = tmp_path
+
+    cnt, _ = test_plugin_manager.discover()
+    hook_caller = test_plugin_manager.hook.test_specification
+    plugin_names = list(test_plugin_manager.plugins.keys())
+    if regkwargs:
+        if 'entry_point' in regkwargs:
+            # if an entry_point with a matching group is provided
+            # the plugin will be named after the entrypoint name
+            assert 'double_a' in plugin_names
+            assert 'double_b' in plugin_names
+            assert 'double-package' not in test_plugin_manager.plugins
+            assert len(hook_caller.get_hookimpls()) == 2
+        else:  # just prefix
+            # if entry point discovery is disabled, but a top-level module
+            # matches the naming convnetion, then the plugin will be named using
+            # the top level module
+            assert 'app_double_plugin' in plugin_names
+            # however, in this case, there are no implementations in the
+            # top level module (which is the only way naming convention
+            # works)
+            assert len(hook_caller.get_hookimpls()) == 0
+    else:
+        assert cnt == 0
+        assert not hook_caller.get_hookimpls()
+        assert 'double' not in plugin_names
 
 
 def test_plugin_discovery_by_prefix(
@@ -239,8 +250,11 @@ def test_plugin_discovery_by_prefix(
     assert test_plugin_manager.hook.test_specification.spec
     assert not test_plugin_manager.plugins
 
+    test_plugin_manager.discover_prefix = 'app_'
+    test_plugin_manager.discover_path = tmp_path
+
     # discover modules that begin with `app_`
-    count, errs = test_plugin_manager.discover(tmp_path, prefix='app_')
+    count, errs = test_plugin_manager.discover()
     # we should have had one success and one error.
     assert count == len(errs) == 1
 
@@ -265,21 +279,19 @@ def test_plugin_discovery_by_prefix(
     # we'll get a registration error at discovery
     test_plugin_manager.set_blocked('app_invalid_plugin', False)
     with pytest.raises(PluginValidationError):
-        test_plugin_manager.discover(
-            tmp_path, prefix='app_', ignore_errors=False
-        )
+        test_plugin_manager.discover(ignore_errors=False)
 
 
 def test_plugin_discovery_by_prefix_with_bad_plugin(
     tmp_path, add_specification, test_plugin_manager, app_broken_plugin
 ):
-    """Make sure b
-    """
+    """Make sure bad plugins can raise errors"""
+
+    test_plugin_manager.discover_prefix = 'app_'
+    test_plugin_manager.discover_path = tmp_path
 
     with pytest.raises(PluginImportError):
-        test_plugin_manager.discover(
-            tmp_path, prefix='app_', ignore_errors=False
-        )
+        test_plugin_manager.discover(ignore_errors=False)
 
 
 def test_plugin_discovery_by_entry_point(
@@ -297,8 +309,11 @@ def test_plugin_discovery_by_entry_point(
     assert hook_caller.spec
     assert not test_plugin_manager.plugins
 
+    test_plugin_manager.discover_entry_point = 'app.plugin'
+    test_plugin_manager.discover_path = tmp_path
+
     # discover modules that begin with `app_`
-    cnt, err = test_plugin_manager.discover(tmp_path, entry_point='app.plugin')
+    cnt, err = test_plugin_manager.discover()
     # we should have had one success and one error.
     assert cnt == len(err) == 1
 
@@ -322,9 +337,7 @@ def test_plugin_discovery_by_entry_point(
     # we'll get a registration error at discovery
     test_plugin_manager.set_blocked('invalid', False)
     with pytest.raises(PluginValidationError):
-        test_plugin_manager.discover(
-            tmp_path, entry_point='app.plugin', ignore_errors=False
-        )
+        test_plugin_manager.discover(ignore_errors=False)
 
 
 def test_lazy_autodiscovery(
@@ -391,16 +404,16 @@ def test_env_var_disable(
     def test_specification(arg1, arg2):
         ...
 
+    test_plugin_manager.discover_entry_point = 'app.plugin'
+    test_plugin_manager.discover_prefix = 'app_'
+    test_plugin_manager.discover_path = tmp_path
+
     monkeypatch.setenv(f'DISABLE_{blocked}_PLUGINS', '1')
     if blocked == 'ALL':
         with pytest.warns(UserWarning):
-            cnt, err = test_plugin_manager.discover(
-                tmp_path, entry_point='app.plugin', prefix='app_'
-            )
+            cnt, err = test_plugin_manager.discover()
     else:
-        cnt, err = test_plugin_manager.discover(
-            tmp_path, entry_point='app.plugin', prefix='app_'
-        )
+        cnt, err = test_plugin_manager.discover()
     assert cnt == (0 if blocked == 'ALL' else 1)
 
     if blocked == 'ENTRYPOINT':

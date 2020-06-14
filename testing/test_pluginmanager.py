@@ -9,7 +9,6 @@ from napari_plugin_engine import (
     HookImplementationMarker,
     HookSpecificationMarker,
 )
-from napari_plugin_engine.dist import importlib_metadata
 
 
 hookspec = HookSpecificationMarker("example")
@@ -430,35 +429,6 @@ def test_get_hookimpls(pm):
 def test_add_hookspecs_nohooks(pm):
     with pytest.raises(ValueError):
         pm.add_hookspecs(10)
-
-
-def test_load_setuptools_instantiation(monkeypatch, pm):
-    def load():
-        class PseudoPlugin:
-            x = 42
-
-        return PseudoPlugin
-
-    ep = importlib_metadata.EntryPoint('myname', 'myname', 'hello')
-    ep.load = load
-
-    class Distribution:
-        entry_points = (ep,)
-
-    dist = Distribution()
-
-    def my_distributions():
-        return (dist,)
-
-    monkeypatch.setattr(importlib_metadata, "distributions", my_distributions)
-    num, errors = pm.load_entrypoints("hello", ignore_errors=False)
-    assert num == 1
-    plugin = pm.plugins.get("myname")
-    # TODO: do we want to support this?
-    assert plugin.x == 42
-
-    num, errors = pm.load_entrypoints("hello")
-    assert num == 0  # no plugin loaded by this call
 
 
 def test_add_tracefuncs(he_pm):

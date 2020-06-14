@@ -122,13 +122,20 @@ class PluginError(Exception):
             msg += "\n"
 
         if package_info and self.plugin:
-            meta = standard_metadata(self.plugin)
-            meta.pop('license', None)
-            meta.pop('summary', None)
-            if meta:
-                msg += "\n" + "\n".join(
-                    [f'{k: >11}: {v}' for k, v in sorted(meta.items()) if v]
-                )
+            try:
+                meta = standard_metadata(self.plugin)
+                meta.pop('license', None)
+                meta.pop('summary', None)
+                if meta:
+                    msg += "\n" + "\n".join(
+                        [
+                            f'{k: >11}: {v}'
+                            for k, v in sorted(meta.items())
+                            if v
+                        ]
+                    )
+            except ValueError:
+                pass
         msg += '\n'
         return msg
 
