@@ -1,4 +1,5 @@
 import logging
+from enum import Enum
 from types import TracebackType
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Type, Union
 
@@ -9,6 +10,14 @@ if TYPE_CHECKING:
 
 
 ExcInfoTuple = Tuple[Type[Exception], Exception, Optional[TracebackType]]
+
+
+# https://www.python.org/dev/peps/pep-0484/#support-for-singleton-types-in-unions
+class Empty(Enum):
+    token = 0
+
+
+_empty = Empty.token
 
 
 class PluginError(Exception):
@@ -47,14 +56,13 @@ class PluginError(Exception):
         # store all PluginError instances.  can be retrieved with get()
         PluginError._record.append(self)
 
-    # TODO: fix sentinel
     @classmethod
     def get(
         cls,
         *,
-        plugin: Optional[Any] = '_NULL',
-        plugin_name: Optional[str] = '_NULL',
-        error_type: Union[Type['PluginError'], str] = '_NULL',
+        plugin: Union[Any, Empty] = _empty,
+        plugin_name: Union[str, Empty] = _empty,
+        error_type: Union[Type['PluginError'], Empty] = _empty,
     ) -> List['PluginError']:
         """Return errors that have been logged, filtered by parameters.
 
@@ -82,11 +90,11 @@ class PluginError(Exception):
         """
         errors: List['PluginError'] = []
         for error in cls._record:
-            if plugin != '_NULL' and error.plugin != plugin:
+            if plugin is not _empty and error.plugin != plugin:
                 continue
-            if plugin_name != '_NULL' and error.plugin_name != plugin_name:
+            if plugin_name is not _empty and error.plugin_name != plugin_name:
                 continue
-            if error_type != '_NULL':
+            if error_type is not _empty:
                 import inspect
 
                 if not (

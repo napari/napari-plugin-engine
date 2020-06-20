@@ -30,10 +30,12 @@ from .dist import (
     standard_metadata,
 )
 from .exceptions import (
+    Empty,
     PluginError,
     PluginImportError,
     PluginRegistrationError,
     PluginValidationError,
+    _empty,
 )
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImplementation, HookSpecification
@@ -528,11 +530,10 @@ class PluginManager:
             if plugin_name in self._blocked:
                 self._blocked.remove(plugin_name)
 
-    # TODO: fix sentinel
     def get_errors(
         self,
-        plugin: Optional[Any] = '_NULL',
-        error_type: Union[Type[PluginError], str] = '_NULL',
+        plugin: Union[Any, Empty] = _empty,
+        error_type: Union[Type['PluginError'], Empty] = _empty,
     ) -> List[PluginError]:
         """Return a list of PluginErrors associated with ``plugin``.
 
@@ -548,10 +549,10 @@ class PluginManager:
         """
         # not using _ensure_plugin because it may not have been successfully
         # registered
-        plugin_name = '_NULL'
-        if plugin != '_NULL' and isinstance(plugin, str):
+        plugin_name: Union[str, Empty] = _empty
+        if isinstance(plugin, str):
             plugin_name = plugin
-            plugin = '_NULL'
+            plugin = _empty
         return PluginError.get(
             plugin=plugin, plugin_name=plugin_name, error_type=error_type
         )
