@@ -96,9 +96,9 @@ class PluginManager:
         self,
         project_name: str,
         *,
-        discover_entry_point: str = '',
-        discover_prefix: str = '',
-        discover_path: List[str] = None,
+        discover_entry_point: Optional[str] = None,
+        discover_prefix: Optional[str] = None,
+        discover_path: Optional[List[str]] = None,
     ):
         self.project_name = project_name
         self.discover_entry_point = discover_entry_point
@@ -879,10 +879,6 @@ def get_canonical_name(namespace: Any) -> str:
     return getattr(namespace, "__name__", None) or str(id(namespace))
 
 
-def normalized_name(name) -> str:
-    return re.sub(r"[-_.]+", "_", name).lower()
-
-
 def iter_implementations(
     namespace, project_name: str
 ) -> Generator[HookImplementation, None, None]:
@@ -1041,7 +1037,7 @@ def iter_available_plugins(
                         matched = True
                         _seen.add(ep.value.split(".", maxsplit=1)[0])
                         yield (
-                            normalized_name(ep.name),
+                            ep.name,
                             ep.value,
                             dist.metadata.get("name"),
                         )
@@ -1055,7 +1051,7 @@ def iter_available_plugins(
                 for mod in filter(None, top_modules.split('\n')):
                     if mod.startswith(prefix):
                         _seen.add(mod)
-                        yield (normalized_name(name), mod, name)
+                        yield (name, mod, name)
 
         if include_uninstalled and not os.getenv("DISABLE_PREFIX_PLUGINS"):
             from pkgutil import iter_modules
