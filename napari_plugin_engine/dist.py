@@ -15,7 +15,9 @@ def _top_level_module_to_dist() -> Dict[str, importlib_metadata.Distribution]:
     for dist in importlib_metadata.distributions():
         modules = dist.read_text('top_level.txt')
         if modules:
-            for mod in filter(None, modules.split('\n')):
+            for mod in modules.split('\n'):
+                if not mod:
+                    continue
                 mapping[mod] = dist
     return mapping
 
@@ -26,20 +28,24 @@ def _object_to_top_level_module(obj: Any) -> Optional[str]:
     return name.split('.')[0] if name else None
 
 
-@lru_cache(maxsize=128)
 def get_dist(obj) -> Optional[importlib_metadata.Distribution]:
     """Return a :class:`importlib.metadata.Distribution` for any python object.
 
     Parameters
     ----------
     obj : Any
-        A python object
+        A python object. If a string, will be interpreted as a dist name.
 
     Returns
     -------
     dist: Distribution
         The distribution object for the corresponding package, if found.
     """
+    if isinstance(obj, str):
+        try:
+            return importlib_metadata.distribution(obj)
+        except importlib_metadata.PackageNotFoundError:
+            return None
     top_level = _object_to_top_level_module(obj)
     return _top_level_module_to_dist().get(top_level or '')
 
@@ -108,7 +114,7 @@ def standard_metadata(plugin: Any) -> Dict[str, Optional[str]]:
     Parameters
     ----------
     plugin : Any
-        A python object.
+        A python object.  If a string, will be interpreted as a dist name.
 
     Returns
     -------
@@ -123,26 +129,32 @@ def standard_metadata(plugin: Any) -> Dict[str, Optional[str]]:
         - **email**: The author’s (or maintainer's) e-mail address.
         - **license**: The license covering the distribution
         - **url**: The home page for the package, or dowload url if N/A.
+
+    Raises
+    ------
+    ValueError
+        If no distribution can be found for ``plugin``.
     """
     meta = {}
-    if get_dist(plugin):
-        meta = get_metadata(
-            plugin,
-            'name',
-            'version',
-            'summary',
-            'author',
-            'license',
-            'Author-Email',
-            'Home-page',
-        )
-        meta['package'] = meta.pop('name')
-        meta['email'] = meta.pop('Author-Email') or get_metadata(
-            plugin, 'Maintainer-Email'
-        )
-        meta['url'] = meta.pop('Home-page') or get_metadata(
-            plugin, 'Download-Url'
-        )
-        if meta['url'] == 'UNKNOWN':
-            meta['url'] = None
+    if not get_dist(plugin):
+        _top_level_module_to_dist.cache_clear()
+        if not get_dist(plugin):
+            raise ValueError(f"could not find metadata for {plugin}")
+    meta = get_metadata(
+        plugin,
+        'name',
+        'version',
+        'summary',
+        'author',
+        'license',
+        'Author-Email',
+        'Home-page',
+    )
+    meta['package'] = meta.pop('name')
+    meta['email'] = meta.pop('Author-Email') or get_metadata(
+        plugin, 'Maintainer-Email'
+    )
+    meta['url'] = meta.pop('Home-page') or get_metadata(plugin, 'Download-Url')
+    if meta['url'] == 'UNKNOWN':
+        meta['url'] = None
     return meta

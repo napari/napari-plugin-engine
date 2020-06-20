@@ -1,7 +1,8 @@
+import functools
 import importlib
 import inspect
 import os
-import pkgutil
+import re
 import sys
 import warnings
 from contextlib import contextmanager
@@ -29,10 +30,12 @@ from .dist import (
     standard_metadata,
 )
 from .exceptions import (
+    Empty,
     PluginError,
     PluginImportError,
     PluginRegistrationError,
     PluginValidationError,
+    _empty,
 )
 from .hooks import HookCaller, HookExecFunc
 from .implementation import HookImplementation, HookSpecification
@@ -65,6 +68,9 @@ class PluginManager:
     discover_prefix : str, optional
         The default module prefix to use when discovering plugins with
         :meth:`PluginManager.discover`, by default None
+    discover_path : str or list of str, optional
+        A path or paths to include when discovering plugins with
+        :meth:`PluginManager.discover`, by default None
 
     Examples
     --------
@@ -74,11 +80,15 @@ class PluginManager:
         from napari_plugin_engine import PluginManager
         import my_hookspecs
 
-        plugin_manager = PluginManager('my_project')
+        plugin_manager = PluginManager(
+            'my_project',
+            discover_entry_point='app.plugin',
+            discover_prefix='app_',
+        )
         plugin_manager.add_hookspecs(my_hookspecs)
-        plugin_manager.discover(entry_point='app.plugin', prefix='app_')
+        plugin_manager.discover()
 
-        # hooks now live plugin_manager.hook
+        # hooks now live in plugin_manager.hook
         # plugin dict is at plugin_manager.plugins
     """
 
@@ -86,12 +96,14 @@ class PluginManager:
         self,
         project_name: str,
         *,
-        discover_entry_point: str = '',
-        discover_prefix: str = '',
+        discover_entry_point: Optional[str] = None,
+        discover_prefix: Optional[str] = None,
+        discover_path: Optional[List[str]] = None,
     ):
         self.project_name = project_name
         self.discover_entry_point = discover_entry_point
         self.discover_prefix = discover_prefix
+        self.discover_path = discover_path or []
         #: dict : mapping of ``plugin_name`` → ``plugin`` (object)
         #:
         #: Plugins get added to this dict in :meth:`~PluginManager.register`
@@ -146,41 +158,31 @@ class PluginManager:
         """
         return self._inner_hookexec(caller, methods, kwargs)
 
-    def discover(
+    def iter_available(
         self,
-        path: Optional[str] = None,
-        entry_point: Optional[str] = None,
-        prefix: Optional[str] = None,
-        ignore_errors: bool = True,
+    ) -> Generator[Tuple[str, str, Optional[str]], None, None]:
+        """Iterate over available plugins.
+
+        See docstring of :func:`iter_available_plugins` for details.
+        """
+        yield from iter_available_plugins(
+            self.discover_entry_point,
+            self.discover_prefix,
+            self.discover_path,
+            include_uninstalled=bool(self.discover_prefix),
+        )
+
+    def discover(
+        self, ignore_errors: bool = True,
     ) -> Tuple[int, List[PluginError]]:
-        """Discover modules by both naming convention and entry_points.
+        """Discover and load plugins.
 
-        1. `Using naming convention
-           <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-naming-convention>`_:
-           modules installed in the environment that follow a naming convention
-           (e.g. "napari_plugin"), can be discovered using :mod:`pkgutil`. This also
-           enables easy discovery using the PyPI `simple API
-           <https://www.python.org/dev/peps/pep-0503/>`_
-
-        2) `Using package metadata
-           <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata>`_:
-           packages that declare an `entry_point
-           <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
-           in their ``setup.py`` file that matches the ``entry_point`` argument
-           can be discovered using `importlib.metadata
-           <https://docs.python.org/3/library/importlib.metadata.html>`_.
+        Loads plugins in the environment based on
+        ``self.discover_entry_point``, ``self.discover_prefix``, and
+        ``self.discover_path``.
 
         Parameters
         ----------
-        path : str, optional
-            If a string is provided, it is added to sys.path before importing,
-            and removed at the end. by default True
-        entry_point : str, optional
-            An entry_point group to search for, by default None
-        prefix : str, optional
-            If ``provided``, modules in the environment starting with
-            ``prefix`` will be imported and searched for hook implementations
-            by default None.
         ignore_errors : bool, optional
             If ``True``, errors will be gathered and returned at the end.
             Otherwise, they will be raised immediately. by default True
@@ -191,9 +193,6 @@ class PluginManager:
             The number of succefully loaded modules, and a list of errors that
             occurred (if ``ignore_errors`` was ``True``)
         """
-        entry_point = entry_point or self.discover_entry_point
-        prefix = prefix or self.discover_prefix
-
         self.hook._needs_discovery = False
         # allow debugging escape hatch
         if os.environ.get("DISABLE_ALL_PLUGINS"):
@@ -203,20 +202,21 @@ class PluginManager:
             )
             return 0, []
 
-        _top_level_module_to_dist.cache_clear()
         errs: List[PluginError] = []
-        with temp_path_additions(path):
-            count = 0
-            count, errs = self.load_entrypoints(entry_point, '', ignore_errors)
-            n, err = self.load_modules_by_prefix(
-                prefix, ignore_errors, ignore_group=entry_point
-            )
-            count += n
-            errs += err
-            if count:
-                msg = f'loaded {count} plugins:\n  '
-                msg += "\n  ".join([str(p) for p in self.plugins.values()])
-                logger.info(msg)
+        count = 0
+        for name, mod_name, dist_name in self.iter_available():
+            if self.is_registered(name) or self.is_blocked(name):
+                continue
+
+            try:
+                if self._load_and_register(mod_name, name):
+                    count += 1
+            except PluginError as e:
+                errs.append(e)
+                self.set_blocked(name)
+                if ignore_errors:
+                    continue
+                raise e
 
         return count, errs
 
@@ -231,146 +231,15 @@ class PluginManager:
         finally:
             self.hook._needs_discovery = current
 
-    def load_entrypoints(
-        self, group: str, name: str = '', ignore_errors=True
-    ) -> Tuple[int, List[PluginError]]:
-        """Load plugins from distributions with an entry point named ``group``.
-
-        See `using package metadata
-        <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata>`_:
-
-        For background on entry points, see the `Entry Point specification
-        <https://packaging.python.org/specifications/entry-points/>`_ and
-        `setuptools docs
-        <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
-
-        Parameters
-        ----------
-        group : str
-            The entry_point group name to search for
-        name : str, optional
-            If provided, loads only plugins named ``name``, by default None.
-        ignore_errors : bool, optional
-            If ``False``, any errors raised during registration will be
-            immediately raised, by default True
-
-        Returns
-        -------
-        Tuple[int, List[PluginError]]
-            A tuple of `(count, errors)` with the number of new modules
-            registered and a list of any errors encountered (assuming
-            ``ignore_errors`` was ``False``, otherwise they are raised.)
-
-        Raises
-        ------
-        PluginError
-            If ``ignore_errors`` is ``True`` and any errors are raised during
-            registration.
-        """
-        if (not group) or os.environ.get("DISABLE_ENTRYPOINT_PLUGINS"):
-            return 0, []
-        count = 0
-        errors: List[PluginError] = []
-        for dist in importlib_metadata.distributions():
-            for ep in dist.entry_points:
-                if (
-                    ep.group != group  # type: ignore
-                    or (name and ep.name != name)
-                    # already registered
-                    or self.is_registered(ep.name)
-                    or self.is_blocked(ep.name)
-                ):
-                    continue
-
-                try:
-                    if self._load_and_register(ep, ep.name):
-                        count += 1
-                except PluginError as e:
-                    errors.append(e)
-                    self.set_blocked(ep.name)
-                    if ignore_errors:
-                        continue
-                    raise e
-
-        return count, errors
-
-    def load_modules_by_prefix(
-        self, prefix: str, ignore_errors: bool = True, ignore_group: str = '',
-    ) -> Tuple[int, List[PluginError]]:
-        """Load plugins by module naming convention.
-
-        https://packaging.python.org/guides/creating-and-discovering-plugins/#using-naming-convention
-
-        Parameters
-        ----------
-        prefix : str
-            Any modules found in sys.path whose names begin with ``prefix``
-            will be imported and searched for hook implementations.
-        ignore_errors : bool, optional
-            If ``False``, any errors raised during registration will be
-            immediately raised, by default True
-        ignore_entry : str, optional
-            If a module name starts with ``prefix`` but declares an entry_point
-            with a group named ``ignore_group`` or
-            :attr:`~PluginManager.discover_entry_point`, then it will be
-            ignored.
-
-        Returns
-        -------
-        Tuple[int, List[PluginError]]
-            A tuple of `(count, errors)` with the number of new modules
-            registered and a list of any errors encountered (assuming
-            ``ignore_errors`` was ``False``, otherwise they are raised.)
-
-        Raises
-        ------
-        PluginError
-            If ``ignore_errors`` is ``True`` and any errors are raised during
-            registration.
-        """
-        if os.environ.get("DISABLE_PREFIX_PLUGINS") or not prefix:
-            return 0, []
-        count = 0
-        errors: List[PluginError] = []
-        for finder, mod_name, ispkg in pkgutil.iter_modules():
-            if not mod_name.startswith(prefix):
-                continue
-            # try to find a distibution for this module
-            dist = _top_level_module_to_dist().get(mod_name)
-            # if the distribution declares any entrypoints that we known this
-            # manager supports, or which are explicitly excluded, then skip
-            # this module.
-            if dist:
-                skip = (ignore_group, self.discover_entry_point)
-                if any(ep.group in skip for ep in dist.entry_points):  # type: ignore
-                    continue
-            name = dist.metadata.get("name") if dist else mod_name
-            if self.is_registered(name) or self.is_blocked(name):
-                continue
-
-            try:
-                if self._load_and_register(mod_name, name):
-                    count += 1
-            except PluginError as e:
-                errors.append(e)
-                self.set_blocked(name)
-                if ignore_errors:
-                    continue
-                raise e
-
-        return count, errors
-
     def _load_and_register(
-        self,
-        mod: Union[str, importlib_metadata.EntryPoint],
-        plugin_name: Optional[str] = None,
+        self, mod_name: str, plugin_name: Optional[str] = None,
     ) -> Optional[str]:
-        """A helper function to register a module or EntryPoint under a name.
+        """A helper function to import and register a module as ``plugin_name``.
 
         Parameters
         ----------
-        mod : str or importlib_metadata.EntryPoint
-            The name of a module or an EntryPoint object instance to load.
+        mod : str
+            The name of a module (or class in a module) to load.
         plugin_name : str, optional
             Optional name for plugin, by default ``get_canonical_name(plugin)``
 
@@ -390,12 +259,7 @@ class PluginManager:
             If an exception is raised during plugin registration.
         """
         try:
-            if isinstance(mod, importlib_metadata.EntryPoint):
-                mod_name = mod.value
-                module = mod.load()
-            else:
-                mod_name = mod
-                module = importlib.import_module(mod)
+            module = load(mod_name)
             if self.is_registered(module):
                 return None
         except Exception as exc:
@@ -582,6 +446,7 @@ class PluginManager:
 
         Useful if pip uninstall has been run during the session.
         """
+        _top_level_module_to_dist.cache_clear()
         for plugin_module in list(self.plugins.values()):
             try:
                 importlib.reload(plugin_module)
@@ -665,11 +530,10 @@ class PluginManager:
             if plugin_name in self._blocked:
                 self._blocked.remove(plugin_name)
 
-    # TODO: fix sentinel
     def get_errors(
         self,
-        plugin: Optional[Any] = '_NULL',
-        error_type: Union[Type[PluginError], str] = '_NULL',
+        plugin: Union[Any, Empty] = _empty,
+        error_type: Union[Type['PluginError'], Empty] = _empty,
     ) -> List[PluginError]:
         """Return a list of PluginErrors associated with ``plugin``.
 
@@ -685,10 +549,10 @@ class PluginManager:
         """
         # not using _ensure_plugin because it may not have been successfully
         # registered
-        plugin_name = '_NULL'
-        if plugin != '_NULL' and isinstance(plugin, str):
+        plugin_name: Union[str, Empty] = _empty
+        if isinstance(plugin, str):
             plugin_name = plugin
-            plugin = '_NULL'
+            plugin = _empty
         return PluginError.get(
             plugin=plugin, plugin_name=plugin_name, error_type=error_type
         )
@@ -984,7 +848,10 @@ class _HookRelay:
     def __str__(self) -> str:
         text = ''
         for hookname, hookcaller in sorted(self.items(), key=lambda x: x[0]):
-            text += f'{hookname:25}  {len(hookcaller.get_hookimpls()):3} implementations\n'
+            text += (
+                f'{hookname:25}  {len(hookcaller.get_hookimpls()):3}'
+                ' implementations\n'
+            )
         return text
 
     def __len__(self) -> int:
@@ -1091,3 +958,112 @@ def temp_path_additions(path: Optional[Union[str, List[str]]]) -> Generator:
     finally:
         for p in to_add:
             sys.path.remove(p)
+
+
+pattern = re.compile(
+    r'(?P<module>[\w.]+)\s*'
+    r'(:\s*(?P<attr>[\w.]+))?\s*'
+    r'(?P<extras>\[.*\])?\s*$'
+)
+
+
+def load(value: str):
+    """Load and return a module or attribute of a module (such as a class).
+
+    If only a module is indicated by the value, return that module. Otherwise,
+    return the named object.
+    """
+    match = pattern.match(value)
+    if not match:
+        raise ValueError(f"malformed entry point string: {value}")
+    module = importlib.import_module(match.group('module'))
+    attrs = filter(None, (match.group('attr') or '').split('.'))
+    return functools.reduce(getattr, attrs, module)
+
+
+def iter_available_plugins(
+    group: Optional[str] = None,
+    prefix: Optional[str] = None,
+    path: Optional[Union[str, List[str]]] = None,
+    include_uninstalled: bool = None,
+) -> Generator[Tuple[str, str, Optional[str]], None, None]:
+    """Discover modules by both naming convention and entry_points.
+
+    1. `Using naming convention
+        <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-naming-convention>`_:
+        modules installed in the environment that follow a naming convention
+        (e.g. "napari_plugin"), can be discovered using :mod:`pkgutil`. This also
+        enables easy discovery using the PyPI `simple API
+        <https://www.python.org/dev/peps/pep-0503/>`_
+
+    2) `Using package metadata
+        <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata>`_:
+        packages that declare an `entry_point
+        <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
+        in their ``setup.py`` file that matches the ``entry_point`` argument
+        can be discovered using `importlib.metadata
+        <https://docs.python.org/3/library/importlib.metadata.html>`_.
+
+    For background on entry points, see the `Entry Point specification
+    <https://packaging.python.org/specifications/entry-points/>`_.
+
+    Parameters
+    ----------
+    group : str
+        The entry_point group name to search for
+    prefix : str
+        Any modules found in sys.path whose names begin with ``prefix``
+        will be imported and searched for hook implementations.
+    path : str or list of str, optional
+        Path or paths to add to sys.path before importing, removed at the end.
+    include_uninstalled : bool, optional
+        Whether to search for "local" (uninstalled) modules.  Requires that a
+        prefix is provided.  By default, True when prefix is provided.
+
+    Raises
+    ------
+    ValueError
+        If ``include_uninstalled`` is true and ``prefix`` is not provided.
+    """
+    if include_uninstalled is None:
+        include_uninstalled = bool(prefix)
+    with temp_path_additions(path):
+        _seen = set()
+        for dist in importlib_metadata.distributions():
+            matched = False
+            if group and not os.getenv("DISABLE_ENTRYPOINT_PLUGINS"):
+                for ep in dist.entry_points:
+                    if ep.group == group:  # type: ignore
+                        matched = True
+                        _seen.add(ep.value.split(".", maxsplit=1)[0])
+                        yield (
+                            ep.name,
+                            ep.value,
+                            dist.metadata.get("name"),
+                        )
+            if matched:
+                continue
+            if prefix and not os.getenv("DISABLE_PREFIX_PLUGINS"):
+                name = dist.metadata.get("name")
+                if name == prefix or (not name.startswith(prefix)):
+                    continue
+                top_modules = dist.read_text('top_level.txt') or ""
+                for mod in filter(None, top_modules.split('\n')):
+                    if mod.startswith(prefix):
+                        _seen.add(mod)
+                        yield (name, mod, name)
+
+        if include_uninstalled and not os.getenv("DISABLE_PREFIX_PLUGINS"):
+            from pkgutil import iter_modules
+
+            if not prefix:
+                raise ValueError(
+                    "A prefix must be provided with 'include_uninstalled'."
+                )
+            for finder, mod_name, ispkg in iter_modules():
+                if (
+                    mod_name.startswith(prefix)
+                    and mod_name != prefix
+                    and mod_name not in _seen
+                ):
+                    yield (mod_name, mod_name, None)

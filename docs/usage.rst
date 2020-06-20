@@ -92,8 +92,8 @@ Autodiscover plugins in the environment
 ---------------------------------------
 
 However, it is more often the case that you will want to *discover* plugins in
-your environment.  ``napari-plugin-engine`` provides two ways to discover plugins via two
-different conventions:
+your environment.  ``napari-plugin-engine`` provides two ways to discover
+plugins via two different conventions:
 
 1. `Using package metadata
 <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata>`_:
@@ -108,14 +108,14 @@ looking for modules that begin with a specific prefix.
 You can look for either or both, in single call to
 :meth:`~PluginManager.discover`, which will import any modules or entry_points
 that follow one of the aforementioned conventions, and search them for
-functions decorated with the appropriate :class:`HookImplementationMarker` (as shown
-above in ``some_plugin.py``)
+functions decorated with the appropriate :class:`HookImplementationMarker` (as
+shown above in ``some_plugin.py``)
 
 .. code-block:: python
 
-   plugin_manager.discover(
-      entry_point='my_project.plugin', prefix='my_project_'
-   )
+   plugin_manager.discover_entry_point = 'my_project.plugin'
+   plugin_manager.discover_prefix = 'my_project_'
+   plugin_manager.discover()
 
 Use (call) the plugin implementations
 =====================================
@@ -147,13 +147,16 @@ how the ``@my_project_hook_specification`` was used, and how the
 How the ``plugin_name`` is chosen
 =================================
 
+
+
+
 **1. If plugin discovery via entry_points is used**
 
-(e.g. ``plugin_manager.discover(entry_point='app.plugin')``), then plugins
-will be named using the name of the entry_point provided by each plugin.  Note,
-a single package may provide multiple plugins via entry points.  For example,
-if a package had the following ``entry_points`` declared in their ``setup.py``
-file:
+(e.g. ``plugin_manager.discover_entry_point = 'app.plugin';
+plugin_manager.discover()``), then plugins will be named using the name of the
+entry_point provided by each plugin.  Note, a single package may provide
+multiple plugins via entry points.  For example, if a package had the following
+``entry_points`` declared in their ``setup.py`` file:
 
 .. code-block:: python
 
@@ -165,14 +168,14 @@ file:
    ...
    )
 
-... then ``manager.discover(entry_point='app.plugin')`` would register two
-plugins, named ``"plugin1"`` (which would inspect ``module_a`` for
-implementations) and ``"plugin2"`` (which would inspect ``module_b`` for
-implementations).
+... then ``manager.discover()`` would register two plugins, named ``"plugin1"``
+(which would inspect ``module_a`` for implementations) and ``"plugin2"`` (which
+would inspect ``module_b`` for implementations).
 
 **2. If plugin discovery via naming convention is used**
 
-(e.g. ``plugin_manager.discover(prefix='app_')``), then... 
+(e.g. ``plugin_manager.discover_prefix = 'app_'; plugin_manager.discover()``),
+then... 
 
    **2a. If a** ``dist-info`` **folder is found for the module**
    
