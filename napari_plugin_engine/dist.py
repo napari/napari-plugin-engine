@@ -15,7 +15,9 @@ def _top_level_module_to_dist() -> Dict[str, importlib_metadata.Distribution]:
     for dist in importlib_metadata.distributions():
         modules = dist.read_text('top_level.txt')
         if modules:
-            for mod in filter(None, modules.split('\n')):
+            for mod in modules.split('\n'):
+                if not mod:
+                    continue
                 mapping[mod] = dist
     return mapping
 
