@@ -155,6 +155,40 @@ def test_register_dict(he_pm):
     assert he_pm.hook.he_method1(arg=1) == [2]
 
 
+def test_register_getattr_error(he_pm):
+    """This test mimics the dask.delayed decorator. It should pass gracefully.
+    """
+
+    def mock_delayed(func):
+        class GetAnything:
+            def __getattr__(self, val):
+                return self
+
+            def __call__(self, *args):
+                return func(*args)
+
+            def __bool__(self):
+                raise TypeError("Truth of object not supported")
+
+            def __get__(self, instance, cls):
+                import types
+
+                if instance is None:
+                    return self
+                return types.MethodType(self, instance)
+
+        return GetAnything()
+
+    class Plugin1:
+        @mock_delayed
+        def he_method1(self):
+            pass
+
+    pname = he_pm.register(Plugin1)
+    # make sure that nonsense wasn't registered
+    assert len(he_pm.get_hookcallers(he_pm.plugins.get(pname))) == 0
+
+
 def test_register_unknown_hooks(pm):
     class Plugin1:
         @hookimpl
