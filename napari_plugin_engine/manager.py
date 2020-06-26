@@ -891,11 +891,17 @@ def iter_implementations(
             continue
         tag = HookImplementation.format_tag(project_name)
         hookimpl_opts = getattr(method, tag, None)
-        if not hookimpl_opts:
+        if not (isinstance(hookimpl_opts, dict) and hookimpl_opts):
+            # false positive
             continue
 
         # create the HookImplementation instance for this method
-        yield HookImplementation(method, namespace, **hookimpl_opts)
+        try:
+            yield HookImplementation(method, namespace, **hookimpl_opts)
+        except TypeError:
+            # final fallback if the hookimpl_opts dict has invalid keys
+            # it's probably not a real hook implementation anyway.
+            pass
 
 
 def ensure_namespace(obj: Any, name: str = 'orphan') -> Type:
