@@ -113,9 +113,9 @@ shown above in ``some_plugin.py``)
 
 .. code-block:: python
 
-   plugin_manager.discover_entry_point = 'my_project.plugin'
-   plugin_manager.discover_prefix = 'my_project_'
-   plugin_manager.discover()
+   plugin_manager.discover(
+      entry_point='my_project.plugin', prefix='my_project_'
+   )
 
 Use (call) the plugin implementations
 =====================================
@@ -147,16 +147,13 @@ how the ``@my_project_hook_specification`` was used, and how the
 How the ``plugin_name`` is chosen
 =================================
 
-
-
-
 **1. If plugin discovery via entry_points is used**
 
-(e.g. ``plugin_manager.discover_entry_point = 'app.plugin';
-plugin_manager.discover()``), then plugins will be named using the name of the
-entry_point provided by each plugin.  Note, a single package may provide
-multiple plugins via entry points.  For example, if a package had the following
-``entry_points`` declared in their ``setup.py`` file:
+(e.g. ``plugin_manager.discover(entry_point='app.plugin')``), then plugins
+will be named using the name of the entry_point provided by each plugin.  Note,
+a single package may provide multiple plugins via entry points.  For example,
+if a package had the following ``entry_points`` declared in their ``setup.py``
+file:
 
 .. code-block:: python
 
@@ -168,14 +165,14 @@ multiple plugins via entry points.  For example, if a package had the following
    ...
    )
 
-... then ``manager.discover()`` would register two plugins, named ``"plugin1"``
-(which would inspect ``module_a`` for implementations) and ``"plugin2"`` (which
-would inspect ``module_b`` for implementations).
+... then ``manager.discover(entry_point='app.plugin')`` would register two
+plugins, named ``"plugin1"`` (which would inspect ``module_a`` for
+implementations) and ``"plugin2"`` (which would inspect ``module_b`` for
+implementations).
 
 **2. If plugin discovery via naming convention is used**
 
-(e.g. ``plugin_manager.discover_prefix = 'app_'; plugin_manager.discover()``),
-then... 
+(e.g. ``plugin_manager.discover(prefix='app_')``), then... 
 
    **2a. If a** ``dist-info`` **folder is found for the module**
    

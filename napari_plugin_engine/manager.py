@@ -160,29 +160,58 @@ class PluginManager:
 
     def iter_available(
         self,
+        path: Optional[str] = None,
+        entry_point: Optional[str] = None,
+        prefix: Optional[str] = None,
     ) -> Generator[Tuple[str, str, Optional[str]], None, None]:
         """Iterate over available plugins.
 
+        Parameters
+        ----------
+        path : str, optional
+            If a string is provided, it is added to ``sys.path`` (and
+            ``self.discover_path``) before importing, and removed at the end.
+        entry_point : str, optional
+            An entry_point group to search for, by default
+            ``self.discover_entry_point`` is used
+        prefix : str, optional
+            If ``provided``, modules in the environment starting with
+            ``prefix`` will be imported and searched for hook implementations
+            by default ``self.discover_prefix`` is used
+
         See docstring of :func:`iter_available_plugins` for details.
         """
+        _path = self.discover_path
+        if path:
+            _path.append(path)
         yield from iter_available_plugins(
-            self.discover_entry_point,
-            self.discover_prefix,
-            self.discover_path,
+            entry_point or self.discover_entry_point,
+            prefix or self.discover_prefix,
+            _path,
             include_uninstalled=bool(self.discover_prefix),
         )
 
     def discover(
-        self, ignore_errors: bool = True,
+        self,
+        path: Optional[str] = None,
+        entry_point: Optional[str] = None,
+        prefix: Optional[str] = None,
+        ignore_errors: bool = True,
     ) -> Tuple[int, List[PluginError]]:
         """Discover and load plugins.
 
-        Loads plugins in the environment based on
-        ``self.discover_entry_point``, ``self.discover_prefix``, and
-        ``self.discover_path``.
-
         Parameters
         ----------
+        path : str, optional
+            If a string is provided, it is added to ``sys.path`` (and
+            ``self.discover_path``) before importing, and removed at the end.
+        entry_point : str, optional
+            An entry_point group to search for, by default
+            ``self.discover_entry_point`` is used
+        prefix : str, optional
+            If ``provided``, modules in the environment starting with
+            ``prefix`` will be imported and searched for hook implementations
+            by default ``self.discover_prefix`` is used
         ignore_errors : bool, optional
             If ``True``, errors will be gathered and returned at the end.
             Otherwise, they will be raised immediately. by default True
@@ -204,7 +233,9 @@ class PluginManager:
 
         errs: List[PluginError] = []
         count = 0
-        for name, mod_name, dist_name in self.iter_available():
+        for name, mod_name, dist_name in self.iter_available(
+            path, entry_point, prefix
+        ):
             if self.is_registered(name) or self.is_blocked(name):
                 continue
 
