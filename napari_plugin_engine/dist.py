@@ -140,6 +140,7 @@ def standard_metadata(plugin: Any) -> Dict[str, Optional[str]]:
         _top_level_module_to_dist.cache_clear()
         if not get_dist(plugin):
             return {}
+            # TODO: decide appropriate behavior here.
             # raise ValueError(f"could not find metadata for {plugin}")
     meta = get_metadata(
         plugin,
