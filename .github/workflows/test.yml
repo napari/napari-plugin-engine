@@ -47,39 +47,38 @@ jobs:
       run: tox
       env:
         PLATFORM: ${{ matrix.platform }}
+    - name: Coverage
+      if: matrix.python-version == '3.8'
+      uses: codecov/codecov-action@v1
 
-  # napari:
-  #   name: Linux ${{ matrix.python-version }}
-  #   needs: [pretest, test]
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       python-version: [3.6, 3.7, 3.8]
-  #   env:
-  #     DISPLAY: ':99.0'
-  #     PYVER: ${{ matrix.python-version }}
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         fetch-depth: 0
-  #     - name: Set up Python ${{ matrix.python-version }}
-  #       uses: actions/setup-python@v2
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: start xvfb
-  #       if: runner.os == 'Linux'
-  #       run: |
-  #         sudo apt install libxkbcommon-x11-0
-  #         /sbin/start-stop-daemon --start --quiet \
-  #           --pidfile /tmp/custom_xvfb_99.pid --make-pidfile \
-  #           --background --exec /usr/bin/Xvfb \
-  #           -- :99 -screen 0 1920x1200x24 -ac +extension GLX
-  #     - name: Install dependencies
-  #         pip install --upgrade pip
-  #         pip install --upgrade setuptools tox
-  #     - name: Test
-  #       run: tox -e py${PYVER//.}-pyqt,py${PYVER//.}-pyside -- --cov-report=xml --cov=napari
-  #     - name: Coverage
-  #       if: matrix.python-version == '3.8'
-  #       uses: codecov/codecov-action@v1
+  napari:
+    name: napari
+    needs: [pretest, test]
+    runs-on: ubuntu-latest
+    env:
+      DISPLAY: ':99.0'
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: start xvfb
+        run: |
+          sudo apt install libxkbcommon-x11-0
+          /sbin/start-stop-daemon --start --quiet \
+            --pidfile /tmp/custom_xvfb_99.pid --make-pidfile \
+            --background --exec /usr/bin/Xvfb \
+            -- :99 -screen 0 1920x1200x24 -ac +extension GLX
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -rhttps://raw.githubusercontent.com/napari/napari/master/requirements/test.txt
+          pip install git+https://github.com/napari/napari.git#egg=napari[all]
+          pip install pytest-xvfb
+      - name: Test
+        run: |
+          napari --info
+          pytest --pyargs napari
