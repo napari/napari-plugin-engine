@@ -12,8 +12,9 @@ from .implementation import HookImplementation, HookSpecification
 HookExecFunc = Callable[
     ['HookCaller', List[HookImplementation], dict], HookResult
 ]
-"""A function that loops calling a list of :class:`~napari_plugin_engine.HookImplementation` s and
-returns a :class:`~napari_plugin_engine.HookResult`.
+"""A function that loops calling a list of
+:class:`~napari_plugin_engine.HookImplementation` s and returns a
+:class:`~napari_plugin_engine.HookResult`.
 
 Parameters
 ----------
