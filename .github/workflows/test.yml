@@ -80,5 +80,4 @@ jobs:
           pip install git+https://github.com/napari/napari.git#egg=napari[all]
       - name: Test
         run: |
-          napari --info
           pytest --pyargs napari
