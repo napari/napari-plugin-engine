@@ -167,8 +167,7 @@ def test_plugin_meta(
             assert versions[name] == get_version(plug)
             if name == 'app_good_plugin':
                 # this one doesn't have any metadata.. but it will have plugin_name
-                with pytest.raises(ValueError):
-                    standard_metadata(plug)
+                assert standard_metadata(plug) == {}
             else:
                 assert get_version(plug) == standard_metadata(plug).get(
                     'version'
