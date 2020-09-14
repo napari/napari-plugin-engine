@@ -1082,7 +1082,7 @@ def iter_available_plugins(
                 continue
             if prefix and not os.getenv("DISABLE_PREFIX_PLUGINS"):
                 name = dist.metadata.get("name")
-                if name == prefix or (not name.startswith(prefix)):
+                if not name or name == prefix or (not name.startswith(prefix)):
                     continue
                 top_modules = dist.read_text('top_level.txt') or ""
                 for mod in filter(None, top_modules.split('\n')):
