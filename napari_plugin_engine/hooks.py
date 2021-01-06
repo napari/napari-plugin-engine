@@ -154,6 +154,10 @@ class HookCaller:
 
         If ``result_callback`` is not ``None`` it will be called for for each
         non-``None`` result obtained from a hook implementation.
+
+        If ``with_impl`` is ``True``, the caller is indicating that
+        ``result_callback`` has a signature of ``callback(result, hookimpl)``,
+        and will be called as such.
         """
         if result_callback is not None:
             result_callback._wants_impl = with_impl
