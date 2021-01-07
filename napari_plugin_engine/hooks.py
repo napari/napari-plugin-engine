@@ -145,21 +145,33 @@ class HookCaller:
     def __repr__(self) -> str:
         return f"<HookCaller {self.name}>"
 
-    def call_historic(self, result_callback=None, kwargs=None):
+    def call_historic(
+        self, result_callback=None, kwargs=None, with_impl=False
+    ):
         """Call the hook with given ``kwargs`` for all registered plugins and
         for all plugins which will be registered afterwards.
 
         If ``result_callback`` is not ``None`` it will be called for for each
         non-``None`` result obtained from a hook implementation.
+
+        If ``with_impl`` is ``True``, the caller is indicating that
+        ``result_callback`` has a signature of ``callback(result, hookimpl)``,
+        and will be called as such.
         """
+        if result_callback is not None:
+            result_callback._wants_impl = with_impl
         self._call_history.append((kwargs or {}, result_callback))
         # historizing hooks don't return results
-        res = self._hookexec(self, self.get_hookimpls(), kwargs).result
+        res = self._hookexec(self, self.get_hookimpls(), kwargs)
         if result_callback is None:
             return
         # XXX: remember firstresult isn't compat with historic
-        for x in res or []:
-            result_callback(x)
+        if with_impl:
+            for result, impl in zip(res.result, res.implementation):
+                result_callback(result, impl)
+        else:
+            for x in res.result or []:
+                result_callback(x)
 
     def call_extra(self, methods: List[Callable], kwargs: dict):
         """Call the hook with some additional temporarily participating
@@ -176,9 +188,12 @@ class HookCaller:
         """Apply call history to a new hookimpl if it is marked as historic."""
         if self.is_historic():
             for kwargs, result_callback in self._call_history:
-                res = self._hookexec(self, [method], kwargs).result
-                if res and result_callback is not None:
-                    result_callback(res[0])
+                res = self._hookexec(self, [method], kwargs)
+                if res.result and result_callback is not None:
+                    if getattr(result_callback, '_wants_impl', False):
+                        result_callback(res.result[0], res.implementation[0])
+                    else:
+                        result_callback(res.result[0])
 
     def get_plugin_implementation(self, plugin_name: str):
         """Return hook implementation instance for ``plugin_name`` if found."""
