@@ -1,10 +1,11 @@
 """Hook annotation decorators"""
 from typing import Callable, Optional
+
 from .implementation import HookImplementation, HookSpecification
 
 
 class HookSpecificationMarker:
-    """ Decorator helper class for marking functions as hook specifications.
+    """Decorator helper class for marking functions as hook specifications.
 
     You can instantiate it with a project_name to get a decorator. Calling
     :py:meth:`.PluginManager.add_hookspecs` later will discover all marked
@@ -21,7 +22,7 @@ class HookSpecificationMarker:
         historic: bool = False,
         warn_on_impl=None,
     ):
-        """ if passed a function, directly sets attributes on the function
+        """if passed a function, directly sets attributes on the function
         which will make it discoverable to
         :py:meth:`.PluginManager.add_hookspecs`. If passed no function, returns
         a decorator which can be applied to a function later using the

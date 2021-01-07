@@ -4,12 +4,11 @@
 import pytest
 
 from napari_plugin_engine import (
-    PluginValidationError,
     HookCallError,
     HookImplementationMarker,
     HookSpecificationMarker,
+    PluginValidationError,
 )
-
 
 hookspec = HookSpecificationMarker("example")
 hookimpl = HookImplementationMarker("example")
@@ -156,8 +155,7 @@ def test_register_dict(he_pm):
 
 
 def test_register_getattr_error(he_pm):
-    """This test mimics the dask.delayed decorator. It should pass gracefully.
-    """
+    """This test mimics the dask.delayed decorator. It should pass gracefully."""
 
     def mock_delayed(func):
         class GetAnything:
