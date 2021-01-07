@@ -262,9 +262,7 @@ class PluginManager:
             self.hook._needs_discovery = current
 
     def _load_and_register(
-        self,
-        mod_name: str,
-        plugin_name: Optional[str] = None,
+        self, mod_name: str, plugin_name: Optional[str] = None
     ) -> Optional[str]:
         """A helper function to import and register a module as ``plugin_name``.
 
@@ -509,34 +507,17 @@ class PluginManager:
             tag = HookSpecification.format_tag(self.project_name)
             spec_opts = getattr(method, tag, None)
             if spec_opts is not None:
-                hook_caller = getattr(
-                    self.hook,
-                    name,
-                    None,
-                )
+                hook_caller = getattr(self.hook, name, None)
                 if hook_caller is None:
                     hook_caller = HookCaller(
-                        name,
-                        self._hookexec,
-                        namespace,
-                        spec_opts,
+                        name, self._hookexec, namespace, spec_opts
                     )
-                    setattr(
-                        self.hook,
-                        name,
-                        hook_caller,
-                    )
+                    setattr(self.hook, name, hook_caller)
                 else:
                     # plugins registered this hook without knowing the spec
-                    hook_caller.set_specification(
-                        namespace,
-                        spec_opts,
-                    )
+                    hook_caller.set_specification(namespace, spec_opts)
                     for hookfunction in hook_caller.get_hookimpls():
-                        self._verify_hook(
-                            hook_caller,
-                            hookfunction,
-                        )
+                        self._verify_hook(hook_caller, hookfunction)
                 names.append(name)
 
         if not names:
@@ -732,19 +713,9 @@ class PluginManager:
             hooktrace.root.indent += 1
             hooktrace(hook_name, kwargs)
 
-        def after(
-            outcome,
-            hook_name,
-            methods,
-            kwargs,
-        ):
+        def after(outcome, hook_name, methods, kwargs):
             if outcome.excinfo is None:
-                hooktrace(
-                    "finish",
-                    hook_name,
-                    "-->",
-                    outcome.result,
-                )
+                hooktrace("finish", hook_name, "-->", outcome.result)
             hooktrace.root.indent -= 1
 
         return self.add_hookcall_monitoring(before, after)
@@ -889,10 +860,7 @@ class _HookRelay:
 
     def __getattribute__(self, name) -> HookCaller:
         """Trigger manager plugin discovery when accessing hook first time."""
-        if name not in (
-            "_needs_discovery",
-            "_manager",
-        ):
+        if name not in ("_needs_discovery", "_manager"):
             if self._needs_discovery:
                 self._manager.discover()
         return object.__getattribute__(self, name)
