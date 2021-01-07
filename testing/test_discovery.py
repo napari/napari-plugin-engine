@@ -239,8 +239,7 @@ def test_plugin_discovery_by_prefix(
     app_good_plugin,
     app_invalid_plugin,
 ):
-    """Make sure b
-    """
+    """Make sure discovery by package prefix works"""
 
     @add_specification
     def test_specification(arg1, arg2):
