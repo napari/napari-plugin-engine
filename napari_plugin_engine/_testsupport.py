@@ -5,8 +5,8 @@ import pytest
 from napari_plugin_engine import (
     HookCaller,
     HookImplementation,
-    HookSpecification,
     HookImplementationMarker,
+    HookSpecification,
     HookSpecificationMarker,
     PluginManager,
 )

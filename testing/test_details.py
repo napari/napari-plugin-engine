@@ -1,9 +1,11 @@
 import warnings
+
 import pytest
+
 from napari_plugin_engine import (
-    PluginManager,
     HookImplementationMarker,
     HookSpecificationMarker,
+    PluginManager,
 )
 
 hookspec = HookSpecificationMarker("example")

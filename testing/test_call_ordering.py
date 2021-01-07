@@ -1,4 +1,5 @@
 import pytest
+
 from napari_plugin_engine import (
     HookImplementationMarker,
     HookSpecificationMarker,

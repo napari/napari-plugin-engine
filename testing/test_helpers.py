@@ -1,12 +1,13 @@
+import sys
+
+import pytest
+
 from napari_plugin_engine.implementation import varnames
 from napari_plugin_engine.manager import (
     _formatdef,
     ensure_namespace,
     temp_path_additions,
 )
-
-import sys
-import pytest
 
 
 def test_varnames():
