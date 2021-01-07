@@ -1,8 +1,9 @@
 """Call loop machinery."""
 import sys
 from types import TracebackType
-from typing import Any, List, Optional, Tuple, Union, Type
-from .exceptions import PluginCallError, HookCallError
+from typing import Any, List, Optional, Tuple, Type, Union
+
+from .exceptions import HookCallError, PluginCallError
 from .implementation import HookImplementation
 
 

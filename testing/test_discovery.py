@@ -3,12 +3,12 @@ import os
 import pytest
 
 from napari_plugin_engine import (
+    PluginError,
     PluginImportError,
     PluginValidationError,
-    PluginError,
 )
+from napari_plugin_engine.dist import get_version, standard_metadata
 from napari_plugin_engine.manager import temp_path_additions
-from napari_plugin_engine.dist import standard_metadata, get_version
 
 GOOD_PLUGIN = """
 from napari_plugin_engine import HookImplementationMarker
@@ -191,8 +191,7 @@ def test_double_convention(
     test_plugin_manager,
     double_convention_plugin,
 ):
-    """Plugins using both naming convention and entrypoints only register once.
-    """
+    """Plugins using both naming convention and entrypoints only register once."""
 
     @add_specification
     def test_specification(arg1, arg2):
@@ -239,8 +238,7 @@ def test_plugin_discovery_by_prefix(
     app_good_plugin,
     app_invalid_plugin,
 ):
-    """Make sure b
-    """
+    """Make sure b"""
 
     @add_specification
     def test_specification(arg1, arg2):

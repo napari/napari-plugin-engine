@@ -204,7 +204,10 @@ class PluginImplementationError(PluginError):
                 msg += f": {str(cause)}"
 
         super().__init__(
-            msg, plugin=plugin, plugin_name=plugin_name, cause=cause,
+            msg,
+            plugin=plugin,
+            plugin_name=plugin_name,
+            cause=cause,
         )
 
 

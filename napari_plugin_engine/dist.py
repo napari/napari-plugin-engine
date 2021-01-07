@@ -1,7 +1,7 @@
 import inspect
 import sys
 from functools import lru_cache
-from typing import Dict, Any, Optional, overload
+from typing import Any, Dict, Optional, overload
 
 if sys.version_info >= (3, 8):
     from importlib import metadata as importlib_metadata
