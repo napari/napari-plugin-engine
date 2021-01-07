@@ -1,6 +1,6 @@
-from napari_plugin_engine._tracing import TagTracer
-
 import pytest
+
+from napari_plugin_engine._tracing import TagTracer
 
 
 @pytest.fixture

@@ -125,8 +125,7 @@ class HookCaller:
         return self._nonwrappers + self._wrappers
 
     def _add_hookimpl(self, hookimpl: HookImplementation):
-        """Add an implementation to the callback chain.
-        """
+        """Add an implementation to the callback chain."""
         if hookimpl.hookwrapper:
             methods = self._wrappers
         else:
@@ -163,8 +162,8 @@ class HookCaller:
             result_callback(x)
 
     def call_extra(self, methods: List[Callable], kwargs: dict):
-        """ Call the hook with some additional temporarily participating
-        methods using the specified ``kwargs`` as call parameters. """
+        """Call the hook with some additional temporarily participating
+        methods using the specified ``kwargs`` as call parameters."""
         old = list(self._nonwrappers), list(self._wrappers)
         for method in methods:
             self._add_hookimpl(HookImplementation(method))
@@ -174,8 +173,7 @@ class HookCaller:
             self._nonwrappers, self._wrappers = old
 
     def _maybe_apply_history(self, method):
-        """Apply call history to a new hookimpl if it is marked as historic.
-        """
+        """Apply call history to a new hookimpl if it is marked as historic."""
         if self.is_historic():
             for kwargs, result_callback in self._call_history:
                 res = self._hookexec(self, [method], kwargs).result

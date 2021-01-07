@@ -1,6 +1,6 @@
 import inspect
 import sys
-from typing import Callable, Optional, Any
+from typing import Any, Callable, Optional
 
 
 class HookImplementation:

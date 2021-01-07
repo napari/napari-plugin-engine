@@ -27,20 +27,20 @@ __all__ = [
 ]
 
 from .callers import HookResult
+from .dist import get_metadata, standard_metadata
 from .exceptions import (
     HookCallError,
     PluginCallError,
     PluginError,
+    PluginImplementationError,
     PluginImportError,
     PluginRegistrationError,
     PluginValidationError,
-    PluginImplementationError,
 )
 from .hooks import HookCaller
 from .implementation import HookImplementation, HookSpecification
 from .manager import PluginManager
 from .markers import HookImplementationMarker, HookSpecificationMarker
-from .dist import get_metadata, standard_metadata
 
 napari_hook_implementation = HookImplementationMarker("napari")
 napari_hook_specification = HookSpecificationMarker("napari")
