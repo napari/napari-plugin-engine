@@ -13,14 +13,17 @@ functions: Dict[Tuple[str, str], Callable] = dict()
 
 
 def validate_artifacts(folder):
-    """
-    Validate the artifacts built for distribution:
-    raise AssertionError when the artifact is not build properly,
+    """Validate the artifacts built for distribution.
 
     Parameters
     ----------
-    folder : String
+    folder : str
         artifacts folder after build with setuptools
+    
+    Raises
+    ------
+    AssertionError
+        If the artifact is not build properly,
     """
     for pkgpath in os.listdir(folder):
         pkgpath = os.path.join(folder, pkgpath)
