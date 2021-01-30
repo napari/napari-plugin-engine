@@ -19,7 +19,7 @@ def validate_artifacts(folder):
     ----------
     folder : str
         artifacts folder after build with setuptools
-    
+
     Raises
     ------
     AssertionError
