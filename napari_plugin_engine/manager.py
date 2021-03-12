@@ -830,13 +830,16 @@ class PluginManager:
         hooks = self._plugin2hookcallers[plugin]
         name = f'{plugin_name} v{version}'
         text = f'{name:45}  {len(hooks):3} hooks\n'
-        for impl, hook_caller in self.hooks.items():
+        for specname, hook_caller in self.hooks.items():
             for impl in hook_caller.get_hookimpls():
                 if impl.plugin_name == plugin_name:
                     funcname = ''
-                    if impl.function.__name__ != impl.specname:
-                        funcname = f'{impl.function.__module__}.{impl.function.__name__}'
-                    text += f"  - {impl.specname:28} {funcname}\n"
+                    if impl.function.__name__ != specname:
+                        funcname = (
+                            f'{impl.function.__module__}.'
+                            f'{impl.function.__name__}'
+                        )
+                    text += f"  - {specname:28} {funcname}\n"
         return text
 
 
