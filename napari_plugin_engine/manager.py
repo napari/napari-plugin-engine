@@ -820,8 +820,6 @@ class PluginManager:
         text += '-' * 45 + '\n'
         for name, plugin in sorted(self.plugins.items(), key=lambda x: x[0]):
             text += self.plugin_info(plugin) + "\n"
-            # nhooks = len(self._plugin2hookcallers[plugin])
-            # text += f'{name:29}  {nhooks:3} hooks\n'
 
         return text
 
@@ -831,11 +829,17 @@ class PluginManager:
         version = self.get_metadata(plugin, 'version')
         hooks = self._plugin2hookcallers[plugin]
         name = f'{plugin_name} v{version}'
-        text = f'{name:34}  {len(hooks):3} hooks\n'
-        for hook_caller in hooks:
+        text = f'{name:45}  {len(hooks):3} hooks\n'
+        for specname, hook_caller in self.hooks.items():
             for impl in hook_caller.get_hookimpls():
                 if impl.plugin_name == plugin_name:
-                    text += f"  - {impl.specname}\n"
+                    funcname = ''
+                    if impl.function.__name__ != specname:
+                        funcname = (
+                            f'{impl.function.__module__}.'
+                            f'{impl.function.__name__}'
+                        )
+                    text += f"  - {specname:28} {funcname}\n"
         return text
 
 
