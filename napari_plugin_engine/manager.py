@@ -406,7 +406,7 @@ class PluginManager:
         return self.register(namespace, name)
 
     def get_name(self, plugin):
-        """ Return name for registered plugin or ``None`` if not registered. """
+        """Return name for registered plugin or ``None`` if not registered."""
         for name, val in self.plugins.items():
             if plugin == val:
                 return name
@@ -662,7 +662,7 @@ class PluginManager:
                         )
 
     def get_hookcallers(self, plugin: Any) -> Optional[List[HookCaller]]:
-        """ get all hook callers for the specified plugin. """
+        """get all hook callers for the specified plugin."""
         return self._plugin2hookcallers.get(plugin)
 
     def add_hookcall_monitoring(
@@ -706,7 +706,7 @@ class PluginManager:
         return undo
 
     def enable_tracing(self):
-        """Enable tracing of hook calls and return an undo function. """
+        """Enable tracing of hook calls and return an undo function."""
         hooktrace = self.trace.root.get("hook")
 
         def before(hook_name, methods, kwargs):
