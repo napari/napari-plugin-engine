@@ -823,6 +823,9 @@ class PluginManager:
             # nhooks = len(self._plugin2hookcallers[plugin])
             # text += f'{name:29}  {nhooks:3} hooks\n'
 
+        if self._blocked:
+            text += '\nBlocked Plugins:\n----------------\n'
+            text += "\n".join(self._blocked)
         return text
 
     def plugin_info(self, plugin) -> str:
