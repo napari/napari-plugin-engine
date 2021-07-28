@@ -245,6 +245,8 @@ class PluginManager:
                 mod_names = [
                     plugin_mod.__name__ for plugin_mod in self.plugins.values()
                 ]
+                # we may have registered this entry point under a different name,
+                # so check module names to avoid duplicate registration
                 if mod_name not in mod_names:
                     new_name = f"{name}-{self._id_counts[name]}"
                     previously_registered_mod = self.plugins[name].__name__
