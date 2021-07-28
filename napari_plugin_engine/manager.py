@@ -114,6 +114,9 @@ class PluginManager:
         self._plugin2hookcallers: Dict[Any, List[HookCaller]] = {}
 
         self._blocked: Set[str] = set()
+        # multiple plugins might register the same entry point
+        # _id_counts tracks the count of each identical entry point
+        self._id_counts = {}
 
         self.trace = _tracing.TagTracer().get("pluginmanage")
         self.hook = _HookRelay(self)
@@ -236,12 +239,27 @@ class PluginManager:
         for name, mod_name, dist_name in self.iter_available(
             path, entry_point, prefix
         ):
-            if self.is_registered(name) or self.is_blocked(name):
+            old_name = name
+            # different plugin has already registered this entry point
+            if self.is_registered(name): 
+                mod_names = [plugin_mod.__name__ for plugin_mod in self.plugins.values()]
+                if mod_name not in mod_names:
+                    new_name = f"{name}-{self._id_counts[name]}"
+                    previously_registered_mod = self.plugins[name].__name__
+                    warnings.warn(
+                        f"Plugin {name} already registered by {previously_registered_mod} module! Registering as {new_name}."
+                    )
+                    name = new_name
+                else:
+                    continue
+            elif self.is_blocked(name):
                 continue
 
             try:
                 if self._load_and_register(mod_name, name):
                     count += 1
+                    self._id_counts[name] = 1
+                    self._id_counts[old_name] += 1
             except PluginError as e:
                 errs.append(e)
                 self.set_blocked(name)
