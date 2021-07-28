@@ -116,7 +116,7 @@ class PluginManager:
         self._blocked: Set[str] = set()
         # multiple plugins might register the same entry point
         # _id_counts tracks the count of each identical entry point
-        self._id_counts = {}
+        self._id_counts: Dict[str, int] = {}
 
         self.trace = _tracing.TagTracer().get("pluginmanage")
         self.hook = _HookRelay(self)
@@ -241,13 +241,16 @@ class PluginManager:
         ):
             old_name = name
             # different plugin has already registered this entry point
-            if self.is_registered(name): 
-                mod_names = [plugin_mod.__name__ for plugin_mod in self.plugins.values()]
+            if self.is_registered(name):
+                mod_names = [
+                    plugin_mod.__name__ for plugin_mod in self.plugins.values()
+                ]
                 if mod_name not in mod_names:
                     new_name = f"{name}-{self._id_counts[name]}"
                     previously_registered_mod = self.plugins[name].__name__
                     warnings.warn(
-                        f"Plugin {name} already registered by {previously_registered_mod} module! Registering as {new_name}."
+                        f"Plugin {name} already registered by module "
+                        + f"{previously_registered_mod}! Registering as {new_name}."
                     )
                     name = new_name
                 else:

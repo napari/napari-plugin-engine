@@ -337,10 +337,12 @@ def test_plugin_discovery_by_entry_point(
         test_plugin_manager.discover(ignore_errors=False)
 
 
-def test_identical_entry_point_discovery(good_entrypoint_plugin, test_plugin_manager, tmp_path):
+def test_identical_entry_point_discovery(
+    good_entrypoint_plugin, test_plugin_manager, tmp_path
+):
     test_plugin_manager.discover_entry_point = 'app.plugin'
     test_plugin_manager.discover_path = tmp_path
-    
+
     # make second plugin with same entry point
     (tmp_path / "good_entrypoint_plugin2.py").write_text(GOOD_PLUGIN)
     distinfo = tmp_path / "good_entrypoint_plugin2-1.2.3.dist-info"
@@ -371,6 +373,7 @@ def test_identical_entry_point_discovery(good_entrypoint_plugin, test_plugin_man
     assert 'good_entry' in test_plugin_manager.plugins
     assert 'good_entry-2' in test_plugin_manager.plugins
     assert len(test_plugin_manager.plugins) == 2
+
 
 def test_lazy_autodiscovery(
     tmp_path, add_specification, test_plugin_manager, good_entrypoint_plugin
