@@ -406,7 +406,7 @@ class PluginManager:
         return self.register(namespace, name)
 
     def get_name(self, plugin):
-        """ Return name for registered plugin or ``None`` if not registered. """
+        """Return name for registered plugin or ``None`` if not registered."""
         for name, val in self.plugins.items():
             if plugin == val:
                 return name
@@ -662,7 +662,7 @@ class PluginManager:
                         )
 
     def get_hookcallers(self, plugin: Any) -> Optional[List[HookCaller]]:
-        """ get all hook callers for the specified plugin. """
+        """get all hook callers for the specified plugin."""
         return self._plugin2hookcallers.get(plugin)
 
     def add_hookcall_monitoring(
@@ -706,7 +706,7 @@ class PluginManager:
         return undo
 
     def enable_tracing(self):
-        """Enable tracing of hook calls and return an undo function. """
+        """Enable tracing of hook calls and return an undo function."""
         hooktrace = self.trace.root.get("hook")
 
         def before(hook_name, methods, kwargs):
@@ -820,8 +820,6 @@ class PluginManager:
         text += '-' * 45 + '\n'
         for name, plugin in sorted(self.plugins.items(), key=lambda x: x[0]):
             text += self.plugin_info(plugin) + "\n"
-            # nhooks = len(self._plugin2hookcallers[plugin])
-            # text += f'{name:29}  {nhooks:3} hooks\n'
 
         return text
 
@@ -831,11 +829,17 @@ class PluginManager:
         version = self.get_metadata(plugin, 'version')
         hooks = self._plugin2hookcallers[plugin]
         name = f'{plugin_name} v{version}'
-        text = f'{name:34}  {len(hooks):3} hooks\n'
-        for hook_caller in hooks:
+        text = f'{name:45}  {len(hooks):3} hooks\n'
+        for specname, hook_caller in self.hooks.items():
             for impl in hook_caller.get_hookimpls():
                 if impl.plugin_name == plugin_name:
-                    text += f"  - {impl.specname}\n"
+                    funcname = ''
+                    if impl.function.__name__ != specname:
+                        funcname = (
+                            f'{impl.function.__module__}.'
+                            f'{impl.function.__name__}'
+                        )
+                    text += f"  - {specname:28} {funcname}\n"
         return text
 
 
