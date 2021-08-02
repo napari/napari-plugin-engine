@@ -242,9 +242,9 @@ class PluginManager:
             old_name = name
             # different plugin has already registered this entry point
             if self.is_registered(name):
-                mod_names = [
+                mod_names = (
                     plugin_mod.__name__ for plugin_mod in self.plugins.values()
-                ]
+                )
                 # we may have registered this entry point under a different name,
                 # so check module names to avoid duplicate registration
                 if mod_name not in mod_names:
