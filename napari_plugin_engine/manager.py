@@ -821,6 +821,9 @@ class PluginManager:
         for name, plugin in sorted(self.plugins.items(), key=lambda x: x[0]):
             text += self.plugin_info(plugin) + "\n"
 
+        if self._blocked:
+            text += '\nBlocked Plugins:\n----------------\n'
+            text += "\n".join(self._blocked)
         return text
 
     def plugin_info(self, plugin) -> str:
