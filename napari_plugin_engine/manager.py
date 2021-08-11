@@ -521,6 +521,10 @@ class PluginManager:
 
         Functions are recognized if they have been decorated accordingly.
         """
+
+        if isinstance(namespace, dict):
+            return self._add_hookspec_dict(namespace)
+
         names = []
         for name in dir(namespace):
             method = getattr(namespace, name)
