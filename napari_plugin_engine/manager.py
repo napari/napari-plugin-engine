@@ -267,7 +267,7 @@ class PluginManager:
                     self._id_counts[old_name] += 1
             except PluginError as e:
                 errs.append(e)
-                self.set_blocked(name)
+                # self.set_blocked(name)
                 if ignore_errors:
                     continue
                 raise e
