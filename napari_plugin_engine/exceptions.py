@@ -56,12 +56,6 @@ class PluginError(Exception):
         # store all PluginError instances.  can be retrieved with get()
         PluginError._record.append(self)
 
-    def _check_traceback(self):
-        if self.__traceback__ is None:
-            raise RuntimeError(
-                f"{type(self)}.__traceback__ is None, did you forget to `raise` it ?"
-            )
-
     @classmethod
     def get(
         cls,
@@ -112,12 +106,10 @@ class PluginError(Exception):
                     )
                 if not isinstance(error.__cause__, error_type):
                     continue
-            error._check_traceback()
             errors.append(error)
         return errors
 
     def format(self, package_info: bool = True):
-        self._check_traceback()
         msg = f'PluginError: {self}'
         if self.__cause__:
             msg = msg.replace(str(self.__cause__), '').strip(": ") + "\n"
@@ -172,7 +164,6 @@ class PluginError(Exception):
         level : int, optional
             The logging level to use, by default logging.ERROR
         """
-        self._check_traceback()
         if not isinstance(logger, logging.Logger):
             logger = logging.getLogger(logger)
 
@@ -180,7 +171,6 @@ class PluginError(Exception):
 
     def info(self) -> ExcInfoTuple:
         """Return info as would be returned from sys.exc_info()."""
-        self._check_traceback()
         return (self.__class__, self, self.__traceback__)
 
 
