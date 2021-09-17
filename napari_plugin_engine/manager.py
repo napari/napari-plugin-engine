@@ -267,7 +267,10 @@ class PluginManager:
                     self._id_counts[old_name] += 1
             except PluginError as e:
                 errs.append(e)
-                self.set_blocked(name)
+                # commenting out for now, because napari stores this blockage
+                # too permanently, and it's hard to differentiate between
+                # plugins intentionally blocked by the user.
+                # self.set_blocked(name)
                 if ignore_errors:
                     continue
                 raise e
