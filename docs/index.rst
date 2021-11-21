@@ -15,7 +15,7 @@ For details on specific classes in napari-plugin-engine, have a look at the
 :doc:`api`
 
 See also: `documentation for writing a napari plugin
-<https://napari.org/docs/plugins/for_plugin_developers.html>`_.
+<https://napari.org/plugins/stable/for_plugin_developers.html>`_.
 
 .. toctree::
    :maxdepth: 3
