@@ -51,16 +51,14 @@ def get_dist(obj) -> Optional[importlib_metadata.Distribution]:
 
 
 def get_version(plugin) -> str:
-    version = ''
     dist = get_dist(plugin)
-    if dist:
-        version = dist.metadata.get('version')
+    version = dist.metadata.get('version') if dist else ''
     if not version and inspect.ismodule(plugin):
-        version = getattr(plugin, '__version__', None)
+        version = getattr(plugin, '__version__', '')
     if not version:
         top_module = _object_to_top_level_module(plugin)
         if top_module in sys.modules:
-            version = getattr(sys.modules[top_module], '__version__', None)
+            version = getattr(sys.modules[top_module], '__version__', '')
     return str(version) if version else ''
 
 
