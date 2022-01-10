@@ -247,16 +247,15 @@ class PluginManager:
                 )
                 # we may have registered this entry point under a different name,
                 # so check module names to avoid duplicate registration
-                if mod_name not in mod_names:
-                    new_name = f"{name}-{self._id_counts[name]}"
-                    previously_registered_mod = self.plugins[name].__name__
-                    warnings.warn(
-                        f"Plugin {name} already registered by module "
-                        + f"{previously_registered_mod}! Registering as {new_name}."
-                    )
-                    name = new_name
-                else:
+                if mod_name in mod_names:
                     continue
+                new_name = f"{name}-{self._id_counts[name]}"
+                previously_registered_mod = self.plugins[name].__name__
+                warnings.warn(
+                    f"Plugin {name} already registered by module "
+                    + f"{previously_registered_mod}! Registering as {new_name}."
+                )
+                name = new_name
             elif self.is_blocked(name):
                 continue
 
@@ -401,6 +400,13 @@ class PluginManager:
             hookcallers.append(hook_caller)
 
         self._plugin2hookcallers[namespace] = hookcallers
+        if not hookcallers:
+            ns_name = get_canonical_name(namespace)
+            warnings.warn(
+                f"Module {ns_name!r} from plugin {plugin_name!r} has no hooks! "
+                "Consider disabling or uninstalling this plugin. "
+                "If you are a developer, please check your entry point."
+            )
         self.plugins[plugin_name] = namespace
         return plugin_name
 
