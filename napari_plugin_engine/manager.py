@@ -182,7 +182,10 @@ class PluginManager:
             ``prefix`` will be imported and searched for hook implementations
             by default ``self.discover_prefix`` is used
 
+        Notes
+        -----
         See docstring of :func:`iter_available_plugins` for details.
+
         """
         _path = self.discover_path
         if path:
@@ -1065,7 +1068,7 @@ def iter_available_plugins(
         enables easy discovery using the PyPI `simple API
         <https://www.python.org/dev/peps/pep-0503/>`_
 
-    2) `Using package metadata
+    2. `Using package metadata
         <https://packaging.python.org/guides/creating-and-discovering-plugins/#using-package-metadata>`_:
         packages that declare an `entry_point
         <https://setuptools.readthedocs.io/en/latest/setuptools.html#dynamic-discovery-of-services-and-plugins>`_
