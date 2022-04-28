@@ -347,8 +347,8 @@ class PluginManager:
 
         Parameters
         ----------
-        plugin : Any
-            The namespace (class, module, dict, etc...) to register
+        namespace : Any
+            The namespace (class, module, dict, etc...) of the plugin to register
         name : str, optional
             Optional name for plugin, by default ``get_canonical_name(plugin)``
 
