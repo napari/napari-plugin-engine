@@ -122,8 +122,7 @@ def full_plugin_manager(
     double_convention_plugin,
 ):
     @add_specification
-    def test_specification(arg1, arg2):
-        ...
+    def test_specification(arg1, arg2): ...
 
     test_plugin_manager.discover_entry_point = 'app.plugin'
     test_plugin_manager.discover_prefix = 'app_'
@@ -194,8 +193,7 @@ def test_double_convention(
     """Plugins using both naming convention and entrypoints only register once."""
 
     @add_specification
-    def test_specification(arg1, arg2):
-        ...
+    def test_specification(arg1, arg2): ...
 
     assert not test_plugin_manager.plugins
 
@@ -241,8 +239,7 @@ def test_plugin_discovery_by_prefix(
     """Make sure discovery by package prefix works"""
 
     @add_specification
-    def test_specification(arg1, arg2):
-        ...
+    def test_specification(arg1, arg2): ...
 
     assert test_plugin_manager.hook.test_specification.spec
     assert not test_plugin_manager.plugins
@@ -299,8 +296,7 @@ def test_plugin_discovery_by_entry_point(
     invalid_entrypoint_plugin,
 ):
     @add_specification
-    def test_specification(arg1, arg2):
-        ...
+    def test_specification(arg1, arg2): ...
 
     hook_caller = test_plugin_manager.hook.test_specification
     assert hook_caller.spec
@@ -383,8 +379,7 @@ def test_lazy_autodiscovery(
     with test_plugin_manager.discovery_blocked():
 
         @add_specification
-        def test_specification(arg1, arg2):
-            ...
+        def test_specification(arg1, arg2): ...
 
     assert test_plugin_manager.hook._needs_discovery is True
 
@@ -436,8 +431,7 @@ def test_env_var_disable(
     monkeypatch,
 ):
     @add_specification
-    def test_specification(arg1, arg2):
-        ...
+    def test_specification(arg1, arg2): ...
 
     test_plugin_manager.discover_entry_point = 'app.plugin'
     test_plugin_manager.discover_prefix = 'app_'
