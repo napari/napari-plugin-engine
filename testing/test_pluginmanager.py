@@ -1,6 +1,7 @@
 """
 ``PluginManager`` unit and public API testing.
 """
+
 import pytest
 
 from napari_plugin_engine import (
