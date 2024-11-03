@@ -1,4 +1,4 @@
-# napari plugin engine
+# napari plugin engine v1
 
 🚀⭐ **New plugins should use the second generation [npe2](https://github.com/napari/npe2).** ⭐🚀
 
