@@ -1,5 +1,9 @@
 # napari plugin engine
 
+🚀⭐ **New plugins should use the second generation [npe2](https://github.com/napari/npe2).** ⭐🚀
+
+---
+
 [![License](https://img.shields.io/pypi/l/napari-plugin-engine.svg?color=green)](https://github.com/napari/napari-plugin-engine/raw/master/LICENSE)
 [![Build Status](https://travis-ci.com/napari/napari-plugin-engine.svg?branch=master)](https://travis-ci.com/napari/napari-plugin-engine)
 [![Docs Status](https://readthedocs.org/projects/napari-plugin-engine/badge/?version=latest)](https://readthedocs.org/projects/napari_plugin_engine/)
@@ -7,8 +11,7 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-plugin-engine.svg?color=green)](https://python.org)
 [![PyPI](https://img.shields.io/pypi/v/napari-plugin-engine.svg?color=green)](https://pypi.org/project/napari-plugin-engine)
 
-`napari-plugin-engine` is the first generation napari plugin engine. We
-recommend new plugins should use the second generation [npe2](https://github.com/napari/npe2).
+`napari-plugin-engine v1` is the first generation napari plugin engine.
 
 `napari-plugin-engine` is a fork of [pluggy](https://github.com/pytest-dev/pluggy),
 modified by the [napari](https://github.com/napari/napari) team.
