@@ -1,6 +1,7 @@
 """
 Internal hook annotation, representation and calling machinery.
 """
+
 import warnings
 from collections.abc import Sequence
 from typing import Any, Callable, List, Optional, Union
