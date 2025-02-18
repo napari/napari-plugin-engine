@@ -14,8 +14,9 @@
 This project is deprecated. Please use [npe2](https://github.com/napari/npe2) instead.
 
 `napari-plugin-engine` is the first generation napari plugin engine. We
-recommend new plugins use the second generation [npe2](https://github.com/napari/npe2)
-and existing plugins migrate to npe2.
+recommend:
+- new plugins use the second generation [npe2](https://github.com/napari/npe2)
+- existing plugins migrate to npe2 using the [Migration Guide](https://napari.org/stable/plugins/advanced_topics/npe2_migration_guide.html) in our docs.
 
 ---
 
