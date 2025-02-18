@@ -7,8 +7,17 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-plugin-engine.svg?color=green)](https://python.org)
 [![PyPI](https://img.shields.io/pypi/v/napari-plugin-engine.svg?color=green)](https://pypi.org/project/napari-plugin-engine)
 
+---
+
+**DEPRECATED**:
+
+This project is deprecated. Please use [npe2](https://github.com/napari/npe2) instead.
+
 `napari-plugin-engine` is the first generation napari plugin engine. We
-recommend new plugins should use the second generation [npe2](https://github.com/napari/npe2).
+recommend new plugins use the second generation [npe2](https://github.com/napari/npe2)
+and existing plugins migrate to npe2.
+
+---
 
 `napari-plugin-engine` is a fork of [pluggy](https://github.com/pytest-dev/pluggy),
 modified by the [napari](https://github.com/napari/napari) team.
