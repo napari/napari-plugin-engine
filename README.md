@@ -6,6 +6,7 @@
 [![codecov](https://codecov.io/gh/napari/napari/branch/master/graph/badge.svg)](https://codecov.io/gh/napari/napari)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-plugin-engine.svg?color=green)](https://python.org)
 [![PyPI](https://img.shields.io/pypi/v/napari-plugin-engine.svg?color=green)](https://pypi.org/project/napari-plugin-engine)
+![Deprecated](https://img.shields.io/badge/status-deprecated-orange)
 
 ---
 
