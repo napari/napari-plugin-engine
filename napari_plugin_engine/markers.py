@@ -1,4 +1,5 @@
 """Hook annotation decorators"""
+
 from typing import Callable, Optional
 
 from .implementation import HookImplementation, HookSpecification
