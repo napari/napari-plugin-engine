@@ -63,15 +63,13 @@ def get_version(plugin) -> str:
 
 
 @overload
-def get_metadata(plugin, arg: str, *args: None) -> Optional[str]:
-    ...
+def get_metadata(plugin, arg: str, *args: None) -> Optional[str]: ...
 
 
 @overload  # noqa: F811
 def get_metadata(  # noqa: F811
     plugin, arg: str, *args: str
-) -> Dict[str, Optional[str]]:
-    ...
+) -> Dict[str, Optional[str]]: ...
 
 
 def get_metadata(plugin, *args):  # noqa: F811

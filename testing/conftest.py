@@ -12,8 +12,7 @@ def he_pm(request, pm):
 
     class Hooks:
         @hookspec
-        def he_method1(self, arg):
-            ...
+        def he_method1(self, arg): ...
 
     pm.add_hookspecs(request.param(Hooks))
     return pm
