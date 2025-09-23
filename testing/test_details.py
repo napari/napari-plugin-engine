@@ -91,8 +91,7 @@ def test_warning_on_call_vs_hookspec_arg_mismatch():
 def test_repr():
     class Hook:
         @hookspec
-        def myhook(arg):
-            ...
+        def myhook(arg): ...
 
     class Plugin:
         @hookimpl

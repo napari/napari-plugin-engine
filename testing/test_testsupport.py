@@ -3,8 +3,7 @@ def test_spec(test_plugin_manager, add_specification):
     assert not hasattr(test_plugin_manager.hook, 'my_spec')
 
     @add_specification
-    def my_spec(arg1, arg2):
-        ...
+    def my_spec(arg1, arg2): ...
 
     assert hasattr(test_plugin_manager.hook, 'my_spec')
     assert hasattr(test_plugin_manager.hook.my_spec, 'spec')
@@ -15,8 +14,7 @@ def test_full(test_plugin_manager, add_specification, add_implementation):
     assert not relay.items()
 
     @add_specification
-    def my_spec(arg1, arg2):
-        ...
+    def my_spec(arg1, arg2): ...
 
     assert hasattr(relay, 'my_spec')
     assert not relay.my_spec.get_hookimpls()
