@@ -211,19 +211,19 @@ def _multicall(
         if firstresult and errors:
             raise errors[-1]
 
-        outcome = HookResult(
-            results,
-            excinfo=excinfo,
-            firstresult=firstresult,
-            plugin_errors=errors,
-        )
+    outcome = HookResult(
+        results,
+        excinfo=excinfo,
+        firstresult=firstresult,
+        plugin_errors=errors,
+    )
 
-        # run all wrapper post-yield blocks
-        for gen in reversed(teardowns):
-            try:
-                gen.send(outcome)
-                _raise_wrapfail(gen, "has second yield")
-            except StopIteration:
-                pass
+    # run all wrapper post-yield blocks
+    for gen in reversed(teardowns):
+        try:
+            gen.send(outcome)
+            _raise_wrapfail(gen, "has second yield")
+        except StopIteration:
+            pass
 
-        return outcome
+    return outcome
